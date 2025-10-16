@@ -670,7 +670,7 @@ function App() {
             rel="noopener noreferrer"
             className="hover:text-foreground transition-colors underline underline-offset-4"
           >
-            Most Want Tech
+           ⚡️ Most Want Tech ⚡️
           </a>
         </p>
       </footer>
