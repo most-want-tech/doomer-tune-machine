@@ -48,7 +48,7 @@ export function useAudioProcessor() {
   const [duration, setDuration] = useState(0)
   const startTimeRef = useRef(0)
   const pauseTimeRef = useRef(0)
-  const animationFrameRef = useRef<number>()
+  const animationFrameRef = useRef<number | undefined>(undefined)
 
   const generateReverbImpulse = (duration: number, decay: number) => {
     if (!audioContextRef.current) return null
@@ -412,12 +412,13 @@ export function useAudioProcessor() {
     lowPass.connect(delay)
     delay.connect(feedbackGain)
     feedbackGain.connect(delay)
+    
     delay.connect(dryGain)
     delay.connect(convolver)
     convolver.connect(reverbGain)
+    
     dryGain.connect(gain)
     reverbGain.connect(gain)
-    lowPass.connect(gain)
     noiseGain.connect(gain)
     vinylGain.connect(gain)
     gain.connect(offlineContext.destination)
