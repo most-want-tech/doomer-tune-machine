@@ -360,6 +360,37 @@ function App() {
 
                   <div className="space-y-2">
                     <div className="flex justify-between">
+                      <Label>Reverb Mix</Label>
+                      <span className="font-mono text-sm text-muted-foreground">
+                        {(effects.reverbMix * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <Slider
+                      value={[effects.reverbMix]}
+                      onValueChange={(v) => handleEffectChange('reverbMix', v[0])}
+                      max={1}
+                      step={0.01}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label>Reverb Decay</Label>
+                      <span className="font-mono text-sm text-muted-foreground">
+                        {effects.reverbDecay.toFixed(1)}s
+                      </span>
+                    </div>
+                    <Slider
+                      value={[effects.reverbDecay]}
+                      onValueChange={(v) => handleEffectChange('reverbDecay', v[0])}
+                      min={0.5}
+                      max={5}
+                      step={0.1}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
                       <Label>Noise Level</Label>
                       <span className="font-mono text-sm text-muted-foreground">
                         {(effects.noiseLevel * 100).toFixed(0)}%

@@ -9,6 +9,8 @@ export interface AudioEffects {
   vinylCrackle: boolean
   pitchShift: number
   playbackRate: number
+  reverbMix: number
+  reverbDecay: number
 }
 
 export const DEFAULT_EFFECTS: AudioEffects = {
@@ -20,6 +22,8 @@ export const DEFAULT_EFFECTS: AudioEffects = {
   vinylCrackle: false,
   pitchShift: 0,
   playbackRate: 1,
+  reverbMix: 0,
+  reverbDecay: 2,
 }
 
 export function useAudioProcessor() {
@@ -35,6 +39,9 @@ export function useAudioProcessor() {
   const vinylNoiseGainRef = useRef<GainNode | null>(null)
   const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const vinylSourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const convolverRef = useRef<ConvolverNode | null>(null)
+  const reverbGainRef = useRef<GainNode | null>(null)
+  const dryGainRef = useRef<GainNode | null>(null)
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -42,6 +49,25 @@ export function useAudioProcessor() {
   const startTimeRef = useRef(0)
   const pauseTimeRef = useRef(0)
   const animationFrameRef = useRef<number>()
+
+  const generateReverbImpulse = (duration: number, decay: number) => {
+    if (!audioContextRef.current) return null
+    
+    const sampleRate = audioContextRef.current.sampleRate
+    const length = sampleRate * duration
+    const impulse = audioContextRef.current.createBuffer(2, length, sampleRate)
+    const impulseL = impulse.getChannelData(0)
+    const impulseR = impulse.getChannelData(1)
+    
+    for (let i = 0; i < length; i++) {
+      const n = i / length
+      const envelope = Math.pow(1 - n, decay)
+      impulseL[i] = (Math.random() * 2 - 1) * envelope
+      impulseR[i] = (Math.random() * 2 - 1) * envelope
+    }
+    
+    return impulse
+  }
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
@@ -53,6 +79,9 @@ export function useAudioProcessor() {
       highPassFilterRef.current = audioContextRef.current.createBiquadFilter()
       noiseGainRef.current = audioContextRef.current.createGain()
       vinylNoiseGainRef.current = audioContextRef.current.createGain()
+      convolverRef.current = audioContextRef.current.createConvolver()
+      reverbGainRef.current = audioContextRef.current.createGain()
+      dryGainRef.current = audioContextRef.current.createGain()
 
       lowPassFilterRef.current.type = 'lowpass'
       highPassFilterRef.current.type = 'highpass'
@@ -61,6 +90,13 @@ export function useAudioProcessor() {
       vinylNoiseGainRef.current.gain.value = 0
       feedbackGainRef.current.gain.value = 0
       delayNodeRef.current.delayTime.value = 0
+      reverbGainRef.current.gain.value = 0
+      dryGainRef.current.gain.value = 1
+      
+      const impulse = generateReverbImpulse(2, 2)
+      if (impulse && convolverRef.current) {
+        convolverRef.current.buffer = impulse
+      }
     }
   }
 
@@ -103,14 +139,23 @@ export function useAudioProcessor() {
       !lowPassFilterRef.current ||
       !highPassFilterRef.current ||
       !noiseGainRef.current ||
-      !vinylNoiseGainRef.current
+      !vinylNoiseGainRef.current ||
+      !convolverRef.current ||
+      !reverbGainRef.current ||
+      !dryGainRef.current
     ) return
 
     highPassFilterRef.current.connect(lowPassFilterRef.current)
     lowPassFilterRef.current.connect(delayNodeRef.current)
     delayNodeRef.current.connect(feedbackGainRef.current)
     feedbackGainRef.current.connect(delayNodeRef.current)
-    delayNodeRef.current.connect(gainNodeRef.current)
+    
+    delayNodeRef.current.connect(dryGainRef.current)
+    delayNodeRef.current.connect(convolverRef.current)
+    convolverRef.current.connect(reverbGainRef.current)
+    
+    dryGainRef.current.connect(gainNodeRef.current)
+    reverbGainRef.current.connect(gainNodeRef.current)
     lowPassFilterRef.current.connect(gainNodeRef.current)
     noiseGainRef.current.connect(gainNodeRef.current)
     vinylNoiseGainRef.current.connect(gainNodeRef.current)
@@ -283,6 +328,18 @@ export function useAudioProcessor() {
       vinylNoiseGainRef.current.gain.value = effects.vinylCrackle ? 0.15 : 0
     }
     
+    if (reverbGainRef.current && dryGainRef.current) {
+      reverbGainRef.current.gain.value = effects.reverbMix
+      dryGainRef.current.gain.value = 1 - effects.reverbMix
+    }
+    
+    if (convolverRef.current && audioContextRef.current) {
+      const impulse = generateReverbImpulse(effects.reverbDecay, effects.reverbDecay)
+      if (impulse) {
+        convolverRef.current.buffer = impulse
+      }
+    }
+    
     if (sourceNodeRef.current) {
       const pitchFactor = Math.pow(2, effects.pitchShift / 12)
       sourceNodeRef.current.playbackRate.value = effects.playbackRate * pitchFactor
@@ -310,6 +367,9 @@ export function useAudioProcessor() {
     const highPass = offlineContext.createBiquadFilter()
     const noiseGain = offlineContext.createGain()
     const vinylGain = offlineContext.createGain()
+    const convolver = offlineContext.createConvolver()
+    const reverbGain = offlineContext.createGain()
+    const dryGain = offlineContext.createGain()
 
     lowPass.type = 'lowpass'
     highPass.type = 'highpass'
@@ -320,9 +380,16 @@ export function useAudioProcessor() {
     lowPass.frequency.value = effects.lowPassFreq
     highPass.frequency.value = effects.highPassFreq
     vinylGain.gain.value = effects.vinylCrackle ? 0.15 : 0
+    reverbGain.gain.value = effects.reverbMix
+    dryGain.gain.value = 1 - effects.reverbMix
 
     const pitchFactor = Math.pow(2, effects.pitchShift / 12)
     source.playbackRate.value = effects.playbackRate * pitchFactor
+    
+    const reverbImpulse = generateReverbImpulseForOffline(offlineContext, effects.reverbDecay, effects.reverbDecay)
+    if (reverbImpulse) {
+      convolver.buffer = reverbImpulse
+    }
 
     if (effects.noiseLevel > 0) {
       const noiseBuffer = generateNoiseForOffline(offlineContext)
@@ -345,7 +412,11 @@ export function useAudioProcessor() {
     lowPass.connect(delay)
     delay.connect(feedbackGain)
     feedbackGain.connect(delay)
-    delay.connect(gain)
+    delay.connect(dryGain)
+    delay.connect(convolver)
+    convolver.connect(reverbGain)
+    dryGain.connect(gain)
+    reverbGain.connect(gain)
     lowPass.connect(gain)
     noiseGain.connect(gain)
     vinylGain.connect(gain)
@@ -382,6 +453,23 @@ export function useAudioProcessor() {
     }
     
     return buffer
+  }
+
+  const generateReverbImpulseForOffline = (context: OfflineAudioContext, duration: number, decay: number) => {
+    const sampleRate = context.sampleRate
+    const length = sampleRate * duration
+    const impulse = context.createBuffer(2, length, sampleRate)
+    const impulseL = impulse.getChannelData(0)
+    const impulseR = impulse.getChannelData(1)
+    
+    for (let i = 0; i < length; i++) {
+      const n = i / length
+      const envelope = Math.pow(1 - n, decay)
+      impulseL[i] = (Math.random() * 2 - 1) * envelope
+      impulseR[i] = (Math.random() * 2 - 1) * envelope
+    }
+    
+    return impulse
   }
 
   const audioBufferToWav = (buffer: AudioBuffer): ArrayBuffer => {
