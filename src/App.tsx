@@ -166,11 +166,19 @@ function App() {
       setExportProgress(100)
 
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `doomer-${fileName.replace(/\.[^/.]+$/, '')}.wav`
-      a.click()
-      URL.revokeObjectURL(url)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `doomer-${fileName.replace(/\.[^/.]+$/, '')}.wav`
+      anchor.style.display = 'none'
+      document.body.appendChild(anchor)
+      // Append before click to satisfy Safari's download requirements.
+      requestAnimationFrame(() => {
+        anchor.click()
+        requestAnimationFrame(() => {
+          URL.revokeObjectURL(url)
+          anchor.remove()
+        })
+      })
 
       toast.success('Audio exported successfully')
       setTimeout(() => {

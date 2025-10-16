@@ -422,6 +422,7 @@ export function useAudioProcessor() {
     
     dryGain.connect(gain)
     reverbGain.connect(gain)
+    lowPass.connect(gain)
     noiseGain.connect(gain)
     vinylGain.connect(gain)
     gain.connect(offlineContext.destination)
