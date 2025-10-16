@@ -282,7 +282,7 @@ function App() {
                     >
                       {isPlaying ? <Pause size={20} /> : <Play size={20} />}
                     </Button>
-                    <Button onClick={stop} variant="secondary" size="lg">
+                    <Button onClick={() => stop()} variant="secondary" size="lg">
                       <Stop size={20} />
                     </Button>
                   </div>

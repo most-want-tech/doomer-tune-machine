@@ -198,7 +198,7 @@ export function useAudioProcessor() {
       audioContextRef.current.resume()
     }
 
-    stop()
+    stop(false)
 
     sourceNodeRef.current = audioContextRef.current.createBufferSource()
     sourceNodeRef.current.buffer = audioBufferRef.current
@@ -258,7 +258,7 @@ export function useAudioProcessor() {
     }
   }
 
-  const stop = () => {
+  const stop = (resetPosition = true) => {
     if (sourceNodeRef.current) {
       sourceNodeRef.current.stop()
       sourceNodeRef.current = null
@@ -279,8 +279,11 @@ export function useAudioProcessor() {
     }
     
     setIsPlaying(false)
-    setCurrentTime(0)
-    pauseTimeRef.current = 0
+    
+    if (resetPosition) {
+      setCurrentTime(0)
+      pauseTimeRef.current = 0
+    }
   }
 
   const seek = (time: number) => {
