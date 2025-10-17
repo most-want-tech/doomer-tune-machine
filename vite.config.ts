@@ -23,7 +23,7 @@ export default defineConfig({
     }
   },
   test: {
-    environment: 'node',
+    environment: 'happy-dom',
     setupFiles: resolve(projectRoot, 'tests/setup-vitest.ts'),
     coverage: {
       provider: 'v8',
