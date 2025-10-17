@@ -112,6 +112,8 @@ export const createAudioGraph = (): AudioGraph => {
   const dispose = async () => {
     connected = false
     impulseCache.clear()
+    noiseBuffer = null
+    vinylBuffer = null
     // close may reject if already closed; ignore errors intentionally
     try {
       await context.close()
