@@ -2,15 +2,19 @@ import type { AudioEffects } from './audio-effects'
 import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer } from './audio-utils'
 import { audioBufferToWav } from './wav-encoder'
 
-export const renderOfflineAudio = async (
-  buffer: AudioBuffer,
+const VINYL_GAIN = 0.15
+
+const getPlaybackRateFactor = (effects: AudioEffects) => {
+  const pitchFactor = Math.pow(2, effects.pitchShift / 12)
+  return effects.playbackRate * pitchFactor
+}
+
+const configureGraph = (
+  offlineContext: OfflineAudioContext,
+  source: AudioBufferSourceNode,
+  bufferDuration: number,
   effects: AudioEffects,
-): Promise<Blob> => {
-  const offlineContext = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate)
-
-  const source = offlineContext.createBufferSource()
-  source.buffer = buffer
-
+) => {
   const gain = offlineContext.createGain()
   const delay = offlineContext.createDelay(5)
   const feedback = offlineContext.createGain()
@@ -30,31 +34,9 @@ export const renderOfflineAudio = async (
   noiseGain.gain.value = effects.noiseLevel
   lowPass.frequency.value = effects.lowPassFreq
   highPass.frequency.value = effects.highPassFreq
-  vinylGain.gain.value = effects.vinylCrackle ? 0.15 : 0
+  vinylGain.gain.value = effects.vinylCrackle ? VINYL_GAIN : 0
   reverbGain.gain.value = effects.reverbMix
   dryGain.gain.value = 1 - effects.reverbMix
-
-  const pitchFactor = Math.pow(2, effects.pitchShift / 12)
-  source.playbackRate.value = effects.playbackRate * pitchFactor
-
-  const impulse = createReverbImpulse(offlineContext, effects.reverbDecay, effects.reverbDecay)
-  convolver.buffer = impulse
-
-  if (effects.noiseLevel > 0) {
-    const noiseSource = offlineContext.createBufferSource()
-    noiseSource.buffer = createNoiseBuffer(offlineContext, buffer.duration)
-    noiseSource.connect(noiseGain)
-    noiseSource.loop = true
-    noiseSource.start(0)
-  }
-
-  if (effects.vinylCrackle) {
-    const vinylSource = offlineContext.createBufferSource()
-    vinylSource.buffer = createVinylNoiseBuffer(offlineContext, buffer.duration)
-    vinylSource.connect(vinylGain)
-    vinylSource.loop = true
-    vinylSource.start(0)
-  }
 
   source.connect(highPass)
   highPass.connect(lowPass)
@@ -73,9 +55,58 @@ export const renderOfflineAudio = async (
   vinylGain.connect(gain)
   gain.connect(offlineContext.destination)
 
+  const impulse = createReverbImpulse(offlineContext, effects.reverbDecay, effects.reverbDecay)
+  convolver.buffer = impulse
+
+  if (effects.noiseLevel > 0) {
+    const noiseSource = offlineContext.createBufferSource()
+    noiseSource.buffer = createNoiseBuffer(offlineContext, bufferDuration)
+    noiseSource.connect(noiseGain)
+    noiseSource.loop = true
+    noiseSource.start(0)
+  }
+
+  if (effects.vinylCrackle) {
+    const vinylSource = offlineContext.createBufferSource()
+    vinylSource.buffer = createVinylNoiseBuffer(offlineContext, bufferDuration)
+    vinylSource.connect(vinylGain)
+    vinylSource.loop = true
+    vinylSource.start(0)
+  }
+}
+
+export interface OfflineRenderOptions {
+  sampleRate?: number
+}
+
+export const renderOfflineAudioBuffer = async (
+  buffer: AudioBuffer,
+  effects: AudioEffects,
+  options: OfflineRenderOptions = {},
+): Promise<AudioBuffer> => {
+  const rateFactor = Math.max(0.01, getPlaybackRateFactor(effects))
+  const targetSampleRate = options.sampleRate ?? buffer.sampleRate
+  const playbackDuration = buffer.duration / rateFactor
+  const length = Math.max(1, Math.ceil(playbackDuration * targetSampleRate))
+
+  const offlineContext = new OfflineAudioContext(buffer.numberOfChannels, length, targetSampleRate)
+
+  const source = offlineContext.createBufferSource()
+  source.buffer = buffer
+  source.playbackRate.value = rateFactor
+
+  configureGraph(offlineContext, source, playbackDuration, effects)
+
   source.start(0)
 
-  const renderedBuffer = await offlineContext.startRendering()
+  return offlineContext.startRendering()
+}
+
+export const renderOfflineAudio = async (
+  buffer: AudioBuffer,
+  effects: AudioEffects,
+): Promise<Blob> => {
+  const renderedBuffer = await renderOfflineAudioBuffer(buffer, effects)
   const wav = audioBufferToWav(renderedBuffer)
   return new Blob([wav], { type: 'audio/wav' })
 }
