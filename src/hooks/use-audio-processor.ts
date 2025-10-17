@@ -1,535 +1,306 @@
-import { useEffect, useRef, useState } from 'react'
+import { type MutableRefObject, useEffect, useRef, useState } from 'react'
 
-export interface AudioEffects {
-  delayTime: number
-  delayFeedback: number
-  noiseLevel: number
-  lowPassFreq: number
-  highPassFreq: number
-  vinylCrackle: boolean
-  pitchShift: number
-  playbackRate: number
-  reverbMix: number
-  reverbDecay: number
+import { DEFAULT_EFFECTS } from '@/audio/audio-effects'
+import type { AudioEffects } from '@/audio/audio-effects'
+import { type AudioGraph, createAudioGraph } from '@/audio/audio-graph'
+import { renderOfflineAudio } from '@/audio/offline-renderer'
+
+const VINYL_GAIN = 0.15
+
+const calculatePlaybackRate = (effects: AudioEffects) => {
+  const pitchFactor = Math.pow(2, effects.pitchShift / 12)
+  return effects.playbackRate * pitchFactor
 }
 
-export const DEFAULT_EFFECTS: AudioEffects = {
-  delayTime: 0,
-  delayFeedback: 0,
-  noiseLevel: 0,
-  lowPassFreq: 22000,
-  highPassFreq: 20,
-  vinylCrackle: false,
-  pitchShift: 0,
-  playbackRate: 1,
-  reverbMix: 0,
-  reverbDecay: 2,
+const stopLoopSource = (ref: MutableRefObject<AudioBufferSourceNode | null>) => {
+  if (!ref.current) return
+  try {
+    ref.current.onended = null
+    ref.current.stop()
+  } catch (_error) {
+    /* noop */
+  }
+  try {
+    ref.current.disconnect()
+  } catch (_error) {
+    /* noop */
+  }
+  ref.current = null
 }
 
 export function useAudioProcessor() {
-  const audioContextRef = useRef<AudioContext | null>(null)
+  const graphRef = useRef<AudioGraph | null>(null)
   const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null)
-  const audioBufferRef = useRef<AudioBuffer | null>(null)
-  const gainNodeRef = useRef<GainNode | null>(null)
-  const delayNodeRef = useRef<DelayNode | null>(null)
-  const feedbackGainRef = useRef<GainNode | null>(null)
-  const lowPassFilterRef = useRef<BiquadFilterNode | null>(null)
-  const highPassFilterRef = useRef<BiquadFilterNode | null>(null)
-  const noiseGainRef = useRef<GainNode | null>(null)
-  const vinylNoiseGainRef = useRef<GainNode | null>(null)
   const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const vinylSourceRef = useRef<AudioBufferSourceNode | null>(null)
-  const convolverRef = useRef<ConvolverNode | null>(null)
-  const reverbGainRef = useRef<GainNode | null>(null)
-  const dryGainRef = useRef<GainNode | null>(null)
+  const audioBufferRef = useRef<AudioBuffer | null>(null)
+  const effectsRef = useRef<AudioEffects>(DEFAULT_EFFECTS)
 
   const [isPlaying, setIsPlaying] = useState(false)
+  const isPlayingRef = useRef(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const startTimeRef = useRef(0)
+
   const pauseTimeRef = useRef(0)
-  const animationFrameRef = useRef<number | undefined>(undefined)
+  const startContextTimeRef = useRef(0)
+  const playbackRateRef = useRef(1)
+  const animationFrameRef = useRef<number | null>(null)
 
-  const generateReverbImpulse = (duration: number, decay: number) => {
-    if (!audioContextRef.current) return null
-    
-    const sampleRate = audioContextRef.current.sampleRate
-    const length = sampleRate * duration
-    const impulse = audioContextRef.current.createBuffer(2, length, sampleRate)
-    const impulseL = impulse.getChannelData(0)
-    const impulseR = impulse.getChannelData(1)
-    
-    for (let i = 0; i < length; i++) {
-      const n = i / length
-      const envelope = Math.pow(1 - n, decay)
-      impulseL[i] = (Math.random() * 2 - 1) * envelope
-      impulseR[i] = (Math.random() * 2 - 1) * envelope
+  const ensureGraph = (): AudioGraph => {
+    if (!graphRef.current) {
+      const graph = createAudioGraph()
+      graph.ensureConnections()
+      graph.nodes.convolver.buffer = graph.getReverbImpulse(
+        DEFAULT_EFFECTS.reverbDecay,
+        DEFAULT_EFFECTS.reverbDecay,
+      )
+      graphRef.current = graph
+      playbackRateRef.current = calculatePlaybackRate(effectsRef.current)
+      applyEffects(graph, effectsRef.current)
     }
-    
-    return impulse
+    return graphRef.current!
   }
 
-  const initAudioContext = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-      gainNodeRef.current = audioContextRef.current.createGain()
-      delayNodeRef.current = audioContextRef.current.createDelay(5)
-      feedbackGainRef.current = audioContextRef.current.createGain()
-      lowPassFilterRef.current = audioContextRef.current.createBiquadFilter()
-      highPassFilterRef.current = audioContextRef.current.createBiquadFilter()
-      noiseGainRef.current = audioContextRef.current.createGain()
-      vinylNoiseGainRef.current = audioContextRef.current.createGain()
-      convolverRef.current = audioContextRef.current.createConvolver()
-      reverbGainRef.current = audioContextRef.current.createGain()
-      dryGainRef.current = audioContextRef.current.createGain()
+  const applyEffects = (graph: AudioGraph, effects: AudioEffects) => {
+    const { context, nodes } = graph
+    const now = context.currentTime
 
-      lowPassFilterRef.current.type = 'lowpass'
-      highPassFilterRef.current.type = 'highpass'
-      
-      noiseGainRef.current.gain.value = 0
-      vinylNoiseGainRef.current.gain.value = 0
-      feedbackGainRef.current.gain.value = 0
-      delayNodeRef.current.delayTime.value = 0
-      reverbGainRef.current.gain.value = 0
-      dryGainRef.current.gain.value = 1
-      
-      const impulse = generateReverbImpulse(2, 2)
-      if (impulse && convolverRef.current) {
-        convolverRef.current.buffer = impulse
+    nodes.delay.delayTime.setValueAtTime(effects.delayTime, now)
+    nodes.feedback.gain.setValueAtTime(effects.delayFeedback, now)
+    nodes.noiseGain.gain.setValueAtTime(effects.noiseLevel, now)
+    nodes.lowPass.frequency.setValueAtTime(effects.lowPassFreq, now)
+    nodes.highPass.frequency.setValueAtTime(effects.highPassFreq, now)
+    nodes.vinylGain.gain.setValueAtTime(effects.vinylCrackle ? VINYL_GAIN : 0, now)
+    nodes.reverbGain.gain.setValueAtTime(effects.reverbMix, now)
+    nodes.dryGain.gain.setValueAtTime(1 - effects.reverbMix, now)
+
+    const impulse = graph.getReverbImpulse(effects.reverbDecay, effects.reverbDecay)
+    if (nodes.convolver.buffer !== impulse) {
+      nodes.convolver.buffer = impulse
+    }
+
+    const nextPlaybackRate = calculatePlaybackRate(effects)
+    if (sourceNodeRef.current) {
+      const progress = getPlaybackPosition()
+      playbackRateRef.current = nextPlaybackRate
+      pauseTimeRef.current = progress
+      startContextTimeRef.current = context.currentTime
+      sourceNodeRef.current.playbackRate.setValueAtTime(nextPlaybackRate, now)
+      setCurrentTime(progress)
+    } else {
+      playbackRateRef.current = nextPlaybackRate
+    }
+
+    manageNoiseSource(graph, effects, isPlayingRef.current)
+    manageVinylSource(graph, effects, isPlayingRef.current)
+  }
+
+  const manageNoiseSource = (
+    graph: AudioGraph,
+    effects: AudioEffects,
+    shouldPlay: boolean,
+  ) => {
+    if (effects.noiseLevel > 0 && shouldPlay) {
+      if (!noiseSourceRef.current) {
+        const buffer = graph.getNoiseBuffer()
+        const source = graph.context.createBufferSource()
+        source.buffer = buffer
+        source.loop = true
+        source.connect(graph.nodes.noiseGain)
+        source.start(0)
+        noiseSourceRef.current = source
       }
+    } else if (noiseSourceRef.current) {
+      stopLoopSource(noiseSourceRef)
     }
   }
 
-  const generateNoise = () => {
-    if (!audioContextRef.current) return null
-    
-    const bufferSize = audioContextRef.current.sampleRate * 2
-    const buffer = audioContextRef.current.createBuffer(1, bufferSize, audioContextRef.current.sampleRate)
-    const output = buffer.getChannelData(0)
-    
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1
+  const manageVinylSource = (
+    graph: AudioGraph,
+    effects: AudioEffects,
+    shouldPlay: boolean,
+  ) => {
+    if (effects.vinylCrackle && shouldPlay) {
+      if (!vinylSourceRef.current) {
+        const buffer = graph.getVinylBuffer()
+        const source = graph.context.createBufferSource()
+        source.buffer = buffer
+        source.loop = true
+        source.connect(graph.nodes.vinylGain)
+        source.start(0)
+        vinylSourceRef.current = source
+      }
+    } else if (vinylSourceRef.current) {
+      stopLoopSource(vinylSourceRef)
     }
-    
-    return buffer
-  }
-
-  const generateVinylNoise = () => {
-    if (!audioContextRef.current) return null
-    
-    const bufferSize = audioContextRef.current.sampleRate * 2
-    const buffer = audioContextRef.current.createBuffer(1, bufferSize, audioContextRef.current.sampleRate)
-    const output = buffer.getChannelData(0)
-    
-    for (let i = 0; i < bufferSize; i++) {
-      const crackle = Math.random() > 0.995 ? (Math.random() - 0.5) * 0.5 : 0
-      const hiss = (Math.random() - 0.5) * 0.02
-      output[i] = crackle + hiss
-    }
-    
-    return buffer
-  }
-
-  const connectNodes = () => {
-    if (
-      !audioContextRef.current ||
-      !gainNodeRef.current ||
-      !delayNodeRef.current ||
-      !feedbackGainRef.current ||
-      !lowPassFilterRef.current ||
-      !highPassFilterRef.current ||
-      !noiseGainRef.current ||
-      !vinylNoiseGainRef.current ||
-      !convolverRef.current ||
-      !reverbGainRef.current ||
-      !dryGainRef.current
-    ) return
-
-    highPassFilterRef.current.connect(lowPassFilterRef.current)
-    lowPassFilterRef.current.connect(delayNodeRef.current)
-    delayNodeRef.current.connect(feedbackGainRef.current)
-    feedbackGainRef.current.connect(delayNodeRef.current)
-    
-    delayNodeRef.current.connect(dryGainRef.current)
-    delayNodeRef.current.connect(convolverRef.current)
-    convolverRef.current.connect(reverbGainRef.current)
-    
-    dryGainRef.current.connect(gainNodeRef.current)
-    reverbGainRef.current.connect(gainNodeRef.current)
-    lowPassFilterRef.current.connect(gainNodeRef.current)
-    noiseGainRef.current.connect(gainNodeRef.current)
-    vinylNoiseGainRef.current.connect(gainNodeRef.current)
-    gainNodeRef.current.connect(audioContextRef.current.destination)
   }
 
   const loadAudioFile = async (file: File) => {
-    initAudioContext()
-    
+    const graph = ensureGraph()
+
+    stop()
+
     const arrayBuffer = await file.arrayBuffer()
-    const audioBuffer = await audioContextRef.current!.decodeAudioData(arrayBuffer)
-    
-    audioBufferRef.current = audioBuffer
-    setDuration(audioBuffer.duration)
-    setCurrentTime(0)
+    const decodedBuffer = await graph.context.decodeAudioData(arrayBuffer.slice(0))
+
+    audioBufferRef.current = decodedBuffer
+    setDuration(decodedBuffer.duration)
     pauseTimeRef.current = 0
-    
-    return audioBuffer
+    setCurrentTime(0)
+
+    return decodedBuffer
   }
 
-  const updateTimeDisplay = () => {
-    if (isPlaying && audioContextRef.current) {
-      const elapsed = audioContextRef.current.currentTime - startTimeRef.current
-      const newTime = pauseTimeRef.current + elapsed
-      
-      if (newTime >= duration) {
-        stop()
-        return
-      }
-      
-      setCurrentTime(newTime)
-      animationFrameRef.current = requestAnimationFrame(updateTimeDisplay)
+  const getPlaybackPosition = () => {
+    const graph = graphRef.current
+    if (!graph || !isPlayingRef.current) {
+      return pauseTimeRef.current
+    }
+
+    const elapsed = (graph.context.currentTime - startContextTimeRef.current) * playbackRateRef.current
+    return Math.min(duration, pauseTimeRef.current + Math.max(0, elapsed))
+  }
+
+  const updateClock = () => {
+    if (!isPlayingRef.current) return
+
+    const position = getPlaybackPosition()
+    if (position >= duration) {
+      finalizePlayback(true)
+      return
+    }
+
+    setCurrentTime(position)
+    animationFrameRef.current = requestAnimationFrame(updateClock)
+  }
+
+  const finalizePlayback = (resetPosition: boolean) => {
+    const position = getPlaybackPosition()
+    isPlayingRef.current = false
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+
+    setIsPlaying(false)
+
+    if (resetPosition) {
+      pauseTimeRef.current = 0
+      setCurrentTime(0)
+    } else {
+      pauseTimeRef.current = position
+      setCurrentTime(position)
     }
   }
 
-  const play = () => {
-    if (!audioContextRef.current || !audioBufferRef.current) return
+  const play = async () => {
+    const graph = ensureGraph()
+    if (!audioBufferRef.current) return
 
-    if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume()
+    if (graph.context.state === 'suspended') {
+      await graph.context.resume()
     }
 
     stop(false)
 
-    sourceNodeRef.current = audioContextRef.current.createBufferSource()
-    sourceNodeRef.current.buffer = audioBufferRef.current
-    sourceNodeRef.current.playbackRate.value = 1
+    const source = graph.context.createBufferSource()
+    source.buffer = audioBufferRef.current
+    source.playbackRate.value = playbackRateRef.current
+    source.onended = () => finalizePlayback(true)
 
-    if (noiseSourceRef.current) noiseSourceRef.current.stop()
-    if (vinylSourceRef.current) vinylSourceRef.current.stop()
+    sourceNodeRef.current = source
 
-    const noiseBuffer = generateNoise()
-    if (noiseBuffer) {
-      noiseSourceRef.current = audioContextRef.current.createBufferSource()
-      noiseSourceRef.current.buffer = noiseBuffer
-      noiseSourceRef.current.loop = true
-      noiseSourceRef.current.connect(noiseGainRef.current!)
-      noiseSourceRef.current.start()
-    }
+    graph.ensureConnections()
+    source.connect(graph.nodes.highPass)
 
-    const vinylBuffer = generateVinylNoise()
-    if (vinylBuffer) {
-      vinylSourceRef.current = audioContextRef.current.createBufferSource()
-      vinylSourceRef.current.buffer = vinylBuffer
-      vinylSourceRef.current.loop = true
-      vinylSourceRef.current.connect(vinylNoiseGainRef.current!)
-      vinylSourceRef.current.start()
-    }
-
-    connectNodes()
-    sourceNodeRef.current.connect(highPassFilterRef.current!)
-    sourceNodeRef.current.start(0, pauseTimeRef.current)
-    
-    startTimeRef.current = audioContextRef.current.currentTime
+    startContextTimeRef.current = graph.context.currentTime
+    isPlayingRef.current = true
     setIsPlaying(true)
-    updateTimeDisplay()
+
+    source.start(0, pauseTimeRef.current)
+    animationFrameRef.current = requestAnimationFrame(updateClock)
+
+    manageNoiseSource(graph, effectsRef.current, true)
+    manageVinylSource(graph, effectsRef.current, true)
   }
 
   const pause = () => {
-    if (sourceNodeRef.current && isPlaying) {
-      sourceNodeRef.current.stop()
-      sourceNodeRef.current = null
-      
-      if (noiseSourceRef.current) {
-        noiseSourceRef.current.stop()
-        noiseSourceRef.current = null
-      }
-      
-      if (vinylSourceRef.current) {
-        vinylSourceRef.current.stop()
-        vinylSourceRef.current = null
-      }
-      
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      
-      setIsPlaying(false)
-      pauseTimeRef.current = currentTime
-    }
+    if (!isPlayingRef.current || !sourceNodeRef.current) return
+
+    const position = getPlaybackPosition()
+    stop(false)
+    pauseTimeRef.current = position
+    setCurrentTime(position)
   }
 
   const stop = (resetPosition = true) => {
     if (sourceNodeRef.current) {
-      sourceNodeRef.current.stop()
+      try {
+        sourceNodeRef.current.onended = null
+        sourceNodeRef.current.stop()
+      } catch (_error) {
+        /* noop */
+      }
+      try {
+        sourceNodeRef.current.disconnect()
+      } catch (_error) {
+        /* noop */
+      }
       sourceNodeRef.current = null
     }
-    
-    if (noiseSourceRef.current) {
-      noiseSourceRef.current.stop()
-      noiseSourceRef.current = null
-    }
-    
-    if (vinylSourceRef.current) {
-      vinylSourceRef.current.stop()
-      vinylSourceRef.current = null
-    }
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-    }
-    
-    setIsPlaying(false)
-    
-    if (resetPosition) {
-      setCurrentTime(0)
-      pauseTimeRef.current = 0
-    }
+
+    stopLoopSource(noiseSourceRef)
+    stopLoopSource(vinylSourceRef)
+
+    finalizePlayback(resetPosition)
   }
 
   const seek = (time: number) => {
-    const wasPlaying = isPlaying
+    const clamped = Math.max(0, Math.min(duration, time))
+    const wasPlaying = isPlayingRef.current
+
     if (wasPlaying) {
       pause()
     }
-    pauseTimeRef.current = time
-    setCurrentTime(time)
+
+    pauseTimeRef.current = clamped
+    setCurrentTime(clamped)
+
     if (wasPlaying) {
-      play()
+      void play()
     }
   }
 
   const setVolume = (volume: number) => {
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = volume
-    }
+    const graph = graphRef.current
+    if (!graph) return
+    graph.setVolume(volume)
   }
 
   const updateEffects = (effects: AudioEffects) => {
-    if (!audioContextRef.current) return
-
-    if (delayNodeRef.current) {
-      delayNodeRef.current.delayTime.value = effects.delayTime
+    effectsRef.current = effects
+    const graph = graphRef.current
+    if (!graph) {
+      return
     }
-    
-    if (feedbackGainRef.current) {
-      feedbackGainRef.current.gain.value = effects.delayFeedback
-    }
-    
-    if (noiseGainRef.current) {
-      noiseGainRef.current.gain.value = effects.noiseLevel
-    }
-    
-    if (lowPassFilterRef.current) {
-      lowPassFilterRef.current.frequency.value = effects.lowPassFreq
-    }
-    
-    if (highPassFilterRef.current) {
-      highPassFilterRef.current.frequency.value = effects.highPassFreq
-    }
-    
-    if (vinylNoiseGainRef.current) {
-      vinylNoiseGainRef.current.gain.value = effects.vinylCrackle ? 0.15 : 0
-    }
-    
-    if (reverbGainRef.current && dryGainRef.current) {
-      reverbGainRef.current.gain.value = effects.reverbMix
-      dryGainRef.current.gain.value = 1 - effects.reverbMix
-    }
-    
-    if (convolverRef.current && audioContextRef.current) {
-      const impulse = generateReverbImpulse(effects.reverbDecay, effects.reverbDecay)
-      if (impulse) {
-        convolverRef.current.buffer = impulse
-      }
-    }
-    
-    if (sourceNodeRef.current) {
-      const pitchFactor = Math.pow(2, effects.pitchShift / 12)
-      sourceNodeRef.current.playbackRate.value = effects.playbackRate * pitchFactor
-    }
+    applyEffects(graph, effects)
   }
 
-  const exportAudio = async (effects: AudioEffects): Promise<Blob> => {
+  const exportAudio = async (effects: AudioEffects) => {
     if (!audioBufferRef.current) {
       throw new Error('No audio loaded')
     }
-
-    const offlineContext = new OfflineAudioContext(
-      audioBufferRef.current.numberOfChannels,
-      audioBufferRef.current.length,
-      audioBufferRef.current.sampleRate
-    )
-
-    const source = offlineContext.createBufferSource()
-    source.buffer = audioBufferRef.current
-
-    const gain = offlineContext.createGain()
-    const delay = offlineContext.createDelay(5)
-    const feedbackGain = offlineContext.createGain()
-    const lowPass = offlineContext.createBiquadFilter()
-    const highPass = offlineContext.createBiquadFilter()
-    const noiseGain = offlineContext.createGain()
-    const vinylGain = offlineContext.createGain()
-    const convolver = offlineContext.createConvolver()
-    const reverbGain = offlineContext.createGain()
-    const dryGain = offlineContext.createGain()
-
-    lowPass.type = 'lowpass'
-    highPass.type = 'highpass'
-
-    delay.delayTime.value = effects.delayTime
-    feedbackGain.gain.value = effects.delayFeedback
-    noiseGain.gain.value = effects.noiseLevel
-    lowPass.frequency.value = effects.lowPassFreq
-    highPass.frequency.value = effects.highPassFreq
-    vinylGain.gain.value = effects.vinylCrackle ? 0.15 : 0
-    reverbGain.gain.value = effects.reverbMix
-    dryGain.gain.value = 1 - effects.reverbMix
-
-    const pitchFactor = Math.pow(2, effects.pitchShift / 12)
-    source.playbackRate.value = effects.playbackRate * pitchFactor
-    
-    const reverbImpulse = generateReverbImpulseForOffline(offlineContext, effects.reverbDecay, effects.reverbDecay)
-    if (reverbImpulse) {
-      convolver.buffer = reverbImpulse
-    }
-
-    if (effects.noiseLevel > 0) {
-      const noiseBuffer = generateNoiseForOffline(offlineContext)
-      const noiseSource = offlineContext.createBufferSource()
-      noiseSource.buffer = noiseBuffer
-      noiseSource.connect(noiseGain)
-      noiseSource.start()
-    }
-
-    if (effects.vinylCrackle) {
-      const vinylBuffer = generateVinylNoiseForOffline(offlineContext)
-      const vinylSource = offlineContext.createBufferSource()
-      vinylSource.buffer = vinylBuffer
-      vinylSource.connect(vinylGain)
-      vinylSource.start()
-    }
-
-    source.connect(highPass)
-    highPass.connect(lowPass)
-    lowPass.connect(delay)
-    delay.connect(feedbackGain)
-    feedbackGain.connect(delay)
-    
-    delay.connect(dryGain)
-    delay.connect(convolver)
-    convolver.connect(reverbGain)
-    
-    dryGain.connect(gain)
-    reverbGain.connect(gain)
-    lowPass.connect(gain)
-    noiseGain.connect(gain)
-    vinylGain.connect(gain)
-    gain.connect(offlineContext.destination)
-
-    source.start()
-
-    const renderedBuffer = await offlineContext.startRendering()
-    const wav = audioBufferToWav(renderedBuffer)
-    return new Blob([wav], { type: 'audio/wav' })
-  }
-
-  const generateNoiseForOffline = (context: OfflineAudioContext) => {
-    const bufferSize = context.length
-    const buffer = context.createBuffer(1, bufferSize, context.sampleRate)
-    const output = buffer.getChannelData(0)
-    
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1
-    }
-    
-    return buffer
-  }
-
-  const generateVinylNoiseForOffline = (context: OfflineAudioContext) => {
-    const bufferSize = context.length
-    const buffer = context.createBuffer(1, bufferSize, context.sampleRate)
-    const output = buffer.getChannelData(0)
-    
-    for (let i = 0; i < bufferSize; i++) {
-      const crackle = Math.random() > 0.995 ? (Math.random() - 0.5) * 0.5 : 0
-      const hiss = (Math.random() - 0.5) * 0.02
-      output[i] = crackle + hiss
-    }
-    
-    return buffer
-  }
-
-  const generateReverbImpulseForOffline = (context: OfflineAudioContext, duration: number, decay: number) => {
-    const sampleRate = context.sampleRate
-    const length = sampleRate * duration
-    const impulse = context.createBuffer(2, length, sampleRate)
-    const impulseL = impulse.getChannelData(0)
-    const impulseR = impulse.getChannelData(1)
-    
-    for (let i = 0; i < length; i++) {
-      const n = i / length
-      const envelope = Math.pow(1 - n, decay)
-      impulseL[i] = (Math.random() * 2 - 1) * envelope
-      impulseR[i] = (Math.random() * 2 - 1) * envelope
-    }
-    
-    return impulse
-  }
-
-  const audioBufferToWav = (buffer: AudioBuffer): ArrayBuffer => {
-    const length = buffer.length * buffer.numberOfChannels * 2
-    const arrayBuffer = new ArrayBuffer(44 + length)
-    const view = new DataView(arrayBuffer)
-
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i))
-      }
-    }
-
-    writeString(0, 'RIFF')
-    view.setUint32(4, 36 + length, true)
-    writeString(8, 'WAVE')
-    writeString(12, 'fmt ')
-    view.setUint32(16, 16, true)
-    view.setUint16(20, 1, true)
-    view.setUint16(22, buffer.numberOfChannels, true)
-    view.setUint32(24, buffer.sampleRate, true)
-    view.setUint32(28, buffer.sampleRate * buffer.numberOfChannels * 2, true)
-    view.setUint16(32, buffer.numberOfChannels * 2, true)
-    view.setUint16(34, 16, true)
-    writeString(36, 'data')
-    view.setUint32(40, length, true)
-
-    let offset = 44
-    for (let i = 0; i < buffer.length; i++) {
-      for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]))
-        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true)
-        offset += 2
-      }
-    }
-
-    return arrayBuffer
+    return renderOfflineAudio(audioBufferRef.current, effects)
   }
 
   useEffect(() => {
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      if (sourceNodeRef.current) {
-        sourceNodeRef.current.stop()
-      }
-      if (noiseSourceRef.current) {
-        noiseSourceRef.current.stop()
-      }
-      if (vinylSourceRef.current) {
-        vinylSourceRef.current.stop()
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
+      stop()
+      if (graphRef.current) {
+        graphRef.current.dispose().catch(() => {
+          /* noop */
+        })
+        graphRef.current = null
       }
     }
   }, [])
@@ -548,3 +319,6 @@ export function useAudioProcessor() {
     duration,
   }
 }
+
+export { DEFAULT_EFFECTS }
+export type { AudioEffects }
