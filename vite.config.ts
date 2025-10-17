@@ -22,4 +22,12 @@ export default defineConfig({
       '@': resolve(projectRoot, 'src')
     }
   },
+  test: {
+    environment: 'node',
+    setupFiles: resolve(projectRoot, 'tests/setup-vitest.ts'),
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+    },
+  },
 });

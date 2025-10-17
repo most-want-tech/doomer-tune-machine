@@ -21,3 +21,9 @@ No problem! If you were just checking things out and don’t need to keep this c
 📄 License For Spark Template Resources 
 
 The Spark Template files and resources from GitHub are licensed under the terms of the MIT license, Copyright GitHub, Inc.
+
+## Testing
+
+- `npm run test` runs the Vitest suite once in Node.
+- `npm run test:watch` keeps the Vitest runner active for rapid feedback while editing tests.
+- `npm run test:coverage` generates coverage reports using V8 instrumentation.

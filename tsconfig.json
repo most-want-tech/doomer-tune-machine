@@ -26,8 +26,14 @@
         "./src/*"
       ]
     },
+    "types": [
+      "vitest/importMeta",
+      "vitest/globals"
+    ]
   },
   "include": [
-    "src"
+    "src",
+    "tests",
+    "vite.config.ts"
   ]
 }
