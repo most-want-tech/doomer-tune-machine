@@ -1,6 +1,6 @@
 export const VIDEO_ORIENTATIONS = {
-  landscape: { width: 640, height: 360 },
-  portrait: { width: 360, height: 640 },
+  landscape: { width: 320, height: 180 },
+  portrait: { width: 180, height: 320 },
 } as const
 
 export type VideoOrientation = keyof typeof VIDEO_ORIENTATIONS

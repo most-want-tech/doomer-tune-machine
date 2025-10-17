@@ -3,15 +3,16 @@ import { AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output 
 import type { AudioEffects } from '@/audio/audio-effects'
 import { renderOfflineAudioBuffer } from '@/audio/offline-renderer'
 
+import { getBestSupportedAudioCodec, getBestSupportedVideoCodec } from './codec-support'
 import type { LoadedImage } from './image-utils'
 import { getImageDimensions, loadImageFromFile, releaseImage } from './image-utils'
 import { calculateContainRect, getVideoDimensions, type VideoOrientation } from './video-layout'
 
-const DEFAULT_FRAME_RATE = 30
-const AUDIO_SAMPLE_RATE = 48_000
-const AUDIO_BITRATE = 128_000
-const VIDEO_BITRATE = 1_200_000
-const AUDIO_CHUNK_SECONDS = 1
+const DEFAULT_FRAME_RATE = 12
+const AUDIO_SAMPLE_RATE = 22_050
+const AUDIO_BITRATE = 64_000
+const VIDEO_BITRATE = 320_000
+const AUDIO_CHUNK_SECONDS = 4
 const PROGRESS_AUDIO_WEIGHT = 0.45
 const PROGRESS_VIDEO_WEIGHT = 0.55
 
@@ -107,7 +108,8 @@ export const exportVideo = async ({
   })
 
   const durationSeconds = renderedBuffer.length / renderedBuffer.sampleRate
-  const frameCount = Math.max(1, Math.ceil(durationSeconds * frameRate))
+  const videoSegmentInterval = 1
+  const videoSegmentCount = Math.max(1, Math.ceil(durationSeconds / videoSegmentInterval))
   const { width, height } = getVideoDimensions(orientation)
 
   const image = await loadImageFromFile(imageFile)
@@ -134,7 +136,7 @@ export const exportVideo = async ({
       stage,
       detail,
       framesEncoded,
-      totalFrames: frameCount,
+  totalFrames: videoSegmentCount,
     })
   }
 
@@ -144,13 +146,40 @@ export const exportVideo = async ({
     target,
   })
 
+  // Detect best supported codecs for this browser/platform
+  updateProgress('initializing', 'Detecting codec support')
+
+  const audioCodec = await getBestSupportedAudioCodec(
+    AUDIO_SAMPLE_RATE,
+    renderedBuffer.numberOfChannels,
+    AUDIO_BITRATE,
+  )
+
+  if (!audioCodec) {
+    releaseImage(image)
+    throw new Error(
+      'No supported audio codec found. Your browser may not support audio encoding via WebCodecs API.',
+    )
+  }
+
+  const videoCodec = await getBestSupportedVideoCodec(width, height, VIDEO_BITRATE, frameRate)
+
+  if (!videoCodec) {
+    releaseImage(image)
+    throw new Error(
+      'No supported video codec found. Your browser may not support video encoding via WebCodecs API.',
+    )
+  }
+
+  updateProgress('initializing', `Using ${audioCodec.name} audio and ${videoCodec.name} video`)
+
   const audioSource = new AudioBufferSource({
-    codec: 'aac',
+    codec: audioCodec.codec,
     bitrate: AUDIO_BITRATE,
   })
 
   const videoSource = new CanvasSource(canvas, {
-    codec: 'avc',
+    codec: videoCodec.codec,
     bitrate: VIDEO_BITRATE,
   })
 
@@ -190,12 +219,31 @@ export const exportVideo = async ({
 
     updateProgress('encoding-video', 'Encoding video frames', 0)
 
-    const frameDuration = 1 / frameRate
-    for (let index = 0; index < frameCount; index++) {
-      await videoSource.add(index * frameDuration, frameDuration)
+    const minFrameDuration = 1 / frameRate
+    for (let index = 0; index < videoSegmentCount; index++) {
+      const startTime = index * videoSegmentInterval
+      const remaining = Math.max(0, durationSeconds - startTime)
+      const segmentDuration = index === videoSegmentCount - 1
+        ? Math.max(minFrameDuration, remaining || 0)
+        : videoSegmentInterval
+
+      try {
+        await (videoSource as { add: (start: number, duration: number, options?: { dropFrames?: boolean }) => Promise<void> }).add(
+          startTime,
+          segmentDuration,
+          { dropFrames: true },
+        )
+      } catch (error) {
+        await videoSource.add(startTime, segmentDuration)
+      }
+
       const encodedFrames = index + 1
-      videoProgress = encodedFrames / frameCount
-      updateProgress('encoding-video', `Encoding frame ${encodedFrames} of ${frameCount}`, encodedFrames)
+      videoProgress = encodedFrames / videoSegmentCount
+      updateProgress(
+        'encoding-video',
+        `Encoding frame ${encodedFrames} of ${videoSegmentCount}`,
+        encodedFrames,
+      )
     }
 
     videoProgress = 1
@@ -216,8 +264,8 @@ export const exportVideo = async ({
       percent: 1,
       stage: 'finalizing',
       detail: 'Video export complete',
-      framesEncoded: frameCount,
-      totalFrames: frameCount,
+  framesEncoded: videoSegmentCount,
+  totalFrames: videoSegmentCount,
     })
 
     return {

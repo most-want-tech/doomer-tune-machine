@@ -11,23 +11,23 @@ describe('getVideoDimensions', () => {
 
 describe('calculateContainRect', () => {
   it('centers a wider image with horizontal padding', () => {
-    const rect = calculateContainRect(1920, 1080, 640, 360)
+    const rect = calculateContainRect(1920, 1080, 320, 180)
     expect(rect.x).toBeCloseTo(0)
     expect(rect.y).toBeCloseTo(0)
-    expect(rect.width).toBeCloseTo(640)
-    expect(rect.height).toBeCloseTo(360)
+    expect(rect.width).toBeCloseTo(320)
+    expect(rect.height).toBeCloseTo(180)
   })
 
   it('adds vertical padding when the image is taller', () => {
-    const rect = calculateContainRect(1080, 1920, 640, 360)
-    expect(rect.width).toBeCloseTo(202.5)
-    expect(rect.height).toBeCloseTo(360)
-    expect(rect.x).toBeCloseTo((640 - rect.width) / 2)
+    const rect = calculateContainRect(1080, 1920, 320, 180)
+    expect(rect.width).toBeCloseTo(101.25)
+    expect(rect.height).toBeCloseTo(180)
+    expect(rect.x).toBeCloseTo((320 - rect.width) / 2)
     expect(rect.y).toBeCloseTo(0)
   })
 
   it('returns full target size when source dimensions are invalid', () => {
-    const rect = calculateContainRect(0, 0, 640, 360)
-    expect(rect).toEqual({ x: 0, y: 0, width: 640, height: 360, scale: 1 })
+    const rect = calculateContainRect(0, 0, 320, 180)
+    expect(rect).toEqual({ x: 0, y: 0, width: 320, height: 180, scale: 1 })
   })
 })

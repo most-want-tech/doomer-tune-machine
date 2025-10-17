@@ -44,6 +44,13 @@ vi.mock('../image-utils', () => ({
   validateImageFile: vi.fn(),
 }))
 
+vi.mock('../codec-support', () => ({
+  getBestSupportedAudioCodec: vi.fn().mockResolvedValue({ codec: 'aac', name: 'AAC-LC' }),
+  getBestSupportedVideoCodec: vi.fn().mockResolvedValue({ codec: 'avc', name: 'H.264 Baseline' }),
+  isAudioCodecSupported: vi.fn(),
+  isVideoCodecSupported: vi.fn(),
+}))
+
 vi.mock('mediabunny', () => {
   class FakeBufferTarget {
     buffer: ArrayBuffer | null = null
@@ -187,8 +194,8 @@ describe('exportVideo', () => {
     })
 
     expect(result.blob).toBeInstanceOf(Blob)
-    expect(result.width).toBe(360)
-    expect(result.height).toBe(640)
+  expect(result.width).toBe(180)
+  expect(result.height).toBe(320)
     expect(result.frameRate).toBeGreaterThan(0)
     const lastProgress = progressSpy.mock.calls.at(-1)?.[0]
     expect(lastProgress).toMatchObject({ percent: 1, stage: 'finalizing' })
