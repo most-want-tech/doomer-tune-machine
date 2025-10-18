@@ -22,9 +22,22 @@ AudioBuffer → Source → Filters → Effects → Gain → Destination
 
 ### Component Architecture
 - `App.tsx`: Main component containing all UI and audio coordination logic
+  - **NOTE**: Currently being refactored - see `REFACTOR_PLAN.md` for ongoing architecture changes
+  - Target: Feature-based architecture with modules in `src/features/`
 - `WaveformDisplay`: Canvas-based visualization that renders audio buffer waveform
 - `src/components/ui/`: Shadcn/ui components using Radix primitives - follow existing patterns
 - Effect controls use controlled inputs bound to effects state with immediate audio updates
+
+### Feature-Based Architecture (In Progress)
+Following Bulletproof React patterns, the codebase is being organized into feature modules:
+- **Pattern**: `src/features/<feature-name>/`
+  - `components/` - Feature-specific UI components
+  - `hooks/` - Feature-specific custom hooks
+  - `types.ts` - Feature-specific TypeScript types
+  - `constants/` - Feature-specific configuration/data
+- **Shared modules**: `src/components/`, `src/hooks/`, `src/lib/`, `src/types/`, `src/utils/`
+- **Import rules**: Features can import from shared modules, but not from other features
+- **See**: `.github/REFACTORING_WORKFLOW.md` for complete workflow guide
 
 ## Development Workflows
 
@@ -89,3 +102,30 @@ When adding new audio effects:
 - All audio parameters immediately update via `updateEffects(effects)`
 - Loading states and error handling use sonner toast notifications
 - File uploads handled with hidden input + drag/drop on designated areas
+
+## Refactoring Standards
+
+### When Creating New Features
+Follow the feature-based architecture pattern:
+
+1. **Create feature folder**: `src/features/<feature-name>/`
+2. **Organize by type**:
+   - Components in `components/` subdirectory
+   - Hooks in `hooks/` subdirectory  
+   - Types in `types.ts`
+   - Constants in `constants/` subdirectory
+3. **Use barrel exports**: Create `index.ts` to export public API
+4. **Keep features isolated**: No cross-feature imports
+
+### Major Refactoring Workflow
+For large-scale refactors (>500 LOC changes):
+
+1. **Create detailed plan**: Use `REFACTOR_PLAN.md` as template
+2. **Follow workflow**: See `.github/REFACTORING_WORKFLOW.md`
+3. **Break into phases**: Each phase = separate PR
+4. **Use feature branches**: `refactor/<scope>-<description>`
+5. **Document everything**: Plan, phases, decisions, metrics
+
+**Current major refactor**: App.tsx component architecture  
+**Tracking**: See `REFACTOR_PLAN.md` and associated GitHub issue  
+**Branch**: `refactor/app-component-architecture`
