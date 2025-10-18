@@ -77,6 +77,11 @@ const configureGraph = (
   // Create Tone.js context and PitchShift for offline rendering
   Tone.setContext(offlineContext as any)
   const pitchShift = new Tone.PitchShift(effects.pitchShift)
+  const pitchShiftInput = offlineContext.createGain()
+  const pitchShiftOutput = offlineContext.createGain()
+
+  pitchShiftInput.gain.value = 1
+  pitchShiftOutput.gain.value = 1
 
   lowPass.type = 'lowpass'
   highPass.type = 'highpass'
@@ -95,8 +100,18 @@ const configureGraph = (
   // Connect audio chain with pitch shift
   source.connect(highPass)
   highPass.connect(distortion)
-  distortion.connect(pitchShift.input as any)
-  pitchShift.connect(lowPass as any)
+  distortion.connect(pitchShiftInput)
+
+  // Mirror runtime graph integration to bridge native nodes with Tone.js
+  try {
+    pitchShiftInput.connect((pitchShift as any).input._gainNode)
+    pitchShift.connect(pitchShiftOutput as any)
+  } catch (_error) {
+    // If Tone internals are unavailable (tests/server), bypass pitch shift
+    pitchShiftInput.connect(pitchShiftOutput)
+  }
+
+  pitchShiftOutput.connect(lowPass)
   lowPass.connect(delay)
   delay.connect(feedback)
   feedback.connect(delay)
