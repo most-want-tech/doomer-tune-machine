@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Card } from '@/components/ui/card'
 import { useAudioProcessor, DEFAULT_EFFECTS, type AudioEffects } from '@/hooks/use-audio-processor'
-import { WaveformDisplay } from '@/components/waveform-display'
 import { AppHeader, AppFooter } from '@/components/layout'
-import { AudioUpload, PlaybackControls, VolumeControl, formatTime } from '@/features/audio-player'
+import { AudioUpload } from '@/features/audio-player'
+import { PlaybackPanel } from '@/features/playback'
 import { EffectsPanel } from '@/features/effects'
 import { usePresets, PresetControls } from '@/features/presets'
 import { ExportPanel, useAudioExport, useVideoExport, useVideoImage } from '@/features/export'
@@ -89,29 +88,18 @@ function App() {
 
           {audioBuffer && (
             <>
-              <Card className="p-6 space-y-4">
-                <WaveformDisplay
-                  audioBuffer={audioBuffer}
-                  currentTime={currentTime}
-                  duration={duration}
-                  onSeek={seek}
-                />
-                
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-sm text-muted-foreground">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                  </span>
-                  
-                  <PlaybackControls
-                    isPlaying={isPlaying}
-                    onPlay={play}
-                    onPause={pause}
-                    onStop={stop}
-                  />
-                  
-                  <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
-                </div>
-              </Card>
+              <PlaybackPanel
+                audioBuffer={audioBuffer}
+                currentTime={currentTime}
+                duration={duration}
+                isPlaying={isPlaying}
+                volume={volume}
+                onSeek={seek}
+                onPlay={play}
+                onPause={pause}
+                onStop={stop}
+                onVolumeChange={handleVolumeChange}
+              />
 
               <EffectsPanel
                 effects={effects}
