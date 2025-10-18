@@ -74,8 +74,13 @@ export function useAudioProcessor() {
     nodes.reverbGain.gain.setValueAtTime(effects.reverbMix, now)
     nodes.dryGain.gain.setValueAtTime(1 - effects.reverbMix, now)
 
-    // Apply pitch shift (independent of playback rate)
-    nodes.pitchShift.pitch = effects.pitchShift
+    // Apply pitch shift
+    // To keep pitch independent of playback rate, we need to compensate:
+    // When playback rate changes, pitch changes by 12 * log2(rate) semitones
+    // So we apply the inverse: userPitch - (12 * log2(playbackRate))
+    const playbackRatePitchShift = 12 * Math.log2(effects.playbackRate)
+    const compensatedPitch = effects.pitchShift - playbackRatePitchShift
+    nodes.pitchShift.pitch = compensatedPitch
 
     const impulse = graph.getReverbImpulse(effects.reverbDecay, effects.reverbDecay)
     if (nodes.convolver.buffer !== impulse) {
