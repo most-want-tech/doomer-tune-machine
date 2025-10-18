@@ -9,10 +9,56 @@ const getPlaybackRateFactor = (effects: AudioEffects) => {
   return effects.playbackRate * pitchFactor
 }
 
+const shouldResample = (rateFactor: number) => Math.abs(rateFactor - 1) > 1e-6
+
+const stretchAudioBuffer = (buffer: AudioBuffer, rateFactor: number): AudioBuffer => {
+  if (!Number.isFinite(rateFactor) || rateFactor <= 0 || !shouldResample(rateFactor)) {
+    return buffer
+  }
+
+  const { numberOfChannels, length, sampleRate } = buffer
+  const stretchedLength = Math.max(1, Math.ceil(length / rateFactor))
+  const stretched = new AudioBuffer({
+    numberOfChannels,
+    length: stretchedLength,
+    sampleRate,
+  })
+
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const source = buffer.getChannelData(channel)
+    const target = stretched.getChannelData(channel)
+    const lastIndex = length - 1
+
+    for (let i = 0; i < stretchedLength; i++) {
+      const sourceIndex = i * rateFactor
+      const index0 = Math.min(lastIndex, Math.floor(sourceIndex))
+      const index1 = Math.min(lastIndex, index0 + 1)
+      const fraction = sourceIndex - index0
+
+      if (index0 === index1) {
+        target[i] = source[index0]
+        continue
+      }
+
+      const sample0 = source[index0]
+      const sample1 = source[index1]
+      target[i] = sample0 + (sample1 - sample0) * fraction
+    }
+  }
+
+  return stretched
+}
+
+const getTailSeconds = (effects: AudioEffects) => {
+  const delayTail = effects.delayFeedback > 0 ? effects.delayTime * 4 : 0
+  const reverbTail = effects.reverbMix > 0 ? effects.reverbDecay : 0
+  return Math.max(delayTail, reverbTail)
+}
+
 const configureGraph = (
   offlineContext: OfflineAudioContext,
   source: AudioBufferSourceNode,
-  bufferDuration: number,
+  renderDuration: number,
   effects: AudioEffects,
 ) => {
   const gain = offlineContext.createGain()
@@ -60,7 +106,7 @@ const configureGraph = (
 
   if (effects.noiseLevel > 0) {
     const noiseSource = offlineContext.createBufferSource()
-    noiseSource.buffer = createNoiseBuffer(offlineContext, bufferDuration)
+    noiseSource.buffer = createNoiseBuffer(offlineContext, renderDuration)
     noiseSource.connect(noiseGain)
     noiseSource.loop = true
     noiseSource.start(0)
@@ -68,7 +114,7 @@ const configureGraph = (
 
   if (effects.vinylCrackle) {
     const vinylSource = offlineContext.createBufferSource()
-    vinylSource.buffer = createVinylNoiseBuffer(offlineContext, bufferDuration)
+    vinylSource.buffer = createVinylNoiseBuffer(offlineContext, renderDuration)
     vinylSource.connect(vinylGain)
     vinylSource.loop = true
     vinylSource.start(0)
@@ -86,16 +132,19 @@ export const renderOfflineAudioBuffer = async (
 ): Promise<AudioBuffer> => {
   const rateFactor = Math.max(0.01, getPlaybackRateFactor(effects))
   const targetSampleRate = options.sampleRate ?? buffer.sampleRate
-  const playbackDuration = buffer.duration / rateFactor
-  const length = Math.max(1, Math.ceil(playbackDuration * targetSampleRate))
+  const stretchedBuffer = stretchAudioBuffer(buffer, rateFactor)
+  const playbackDuration = stretchedBuffer.duration
+  const tailSeconds = getTailSeconds(effects)
+  const totalDuration = playbackDuration + tailSeconds
+  const length = Math.max(1, Math.ceil(totalDuration * targetSampleRate))
 
-  const offlineContext = new OfflineAudioContext(buffer.numberOfChannels, length, targetSampleRate)
+  const offlineContext = new OfflineAudioContext(stretchedBuffer.numberOfChannels, length, targetSampleRate)
 
   const source = offlineContext.createBufferSource()
-  source.buffer = buffer
-  source.playbackRate.value = rateFactor
+  source.buffer = stretchedBuffer
+  source.playbackRate.value = 1
 
-  configureGraph(offlineContext, source, playbackDuration, effects)
+  configureGraph(offlineContext, source, totalDuration, effects)
 
   source.start(0)
 
