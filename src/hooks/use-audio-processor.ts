@@ -8,8 +8,8 @@ import { renderOfflineAudio } from '@/audio/offline-renderer'
 const VINYL_GAIN = 0.15
 
 const calculatePlaybackRate = (effects: AudioEffects) => {
-  const pitchFactor = Math.pow(2, effects.pitchShift / 12)
-  return effects.playbackRate * pitchFactor
+  // Playback rate now ONLY controls speed, not pitch
+  return effects.playbackRate
 }
 
 const stopLoopSource = (ref: MutableRefObject<AudioBufferSourceNode | null>) => {
@@ -73,6 +73,9 @@ export function useAudioProcessor() {
     nodes.vinylGain.gain.setValueAtTime(effects.vinylCrackle ? VINYL_GAIN : 0, now)
     nodes.reverbGain.gain.setValueAtTime(effects.reverbMix, now)
     nodes.dryGain.gain.setValueAtTime(1 - effects.reverbMix, now)
+
+    // Apply pitch shift (independent of playback rate)
+    nodes.pitchShift.pitch = effects.pitchShift
 
     const impulse = graph.getReverbImpulse(effects.reverbDecay, effects.reverbDecay)
     if (nodes.convolver.buffer !== impulse) {

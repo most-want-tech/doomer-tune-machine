@@ -78,7 +78,7 @@ export const EFFECT_INFO: EffectInfoMap = {
   },
   pitchShift: {
     name: 'Pitch Shift',
-    description: 'Changes the pitch without affecting speed. Negative values create darker tones, positive values brighten.',
+    description: 'Changes the pitch without affecting playback speed. Negative values create darker tones, positive values brighten. Independent of speed control.',
     min: -12,
     max: 12,
     step: 1,
@@ -88,7 +88,7 @@ export const EFFECT_INFO: EffectInfoMap = {
   },
   playbackRate: {
     name: 'Playback Speed',
-    description: 'Changes both pitch and speed together. Lower values create a slowed-down, dreamy effect.',
+    description: 'Changes playback speed without affecting pitch. Lower values create a slowed-down, dreamy effect while maintaining original pitch. Independent of pitch control.',
     min: 0.25,
     max: 2,
     step: 0.01,

@@ -1,4 +1,5 @@
 /* eslint-disable compat/compat */
+import * as Tone from 'tone'
 import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer } from './audio-utils'
 
 export interface AudioGraphNodes {
@@ -12,6 +13,7 @@ export interface AudioGraphNodes {
   convolver: ConvolverNode
   reverbGain: GainNode
   dryGain: GainNode
+  pitchShift: Tone.PitchShift
 }
 
 export interface AudioGraph {
@@ -31,6 +33,9 @@ export const createAudioGraph = (): AudioGraph => {
   const AudioContextCtor = getAudioContextConstructor()
   const context: AudioContext = new AudioContextCtor()
 
+  // Set Tone.js to use our audio context
+  Tone.setContext(context as any)
+
   const masterGain = context.createGain()
   const delay = context.createDelay(5)
   const feedback = context.createGain()
@@ -42,6 +47,9 @@ export const createAudioGraph = (): AudioGraph => {
   const reverbGain = context.createGain()
   const dryGain = context.createGain()
 
+  // Create Tone.js PitchShift node
+  const pitchShift = new Tone.PitchShift()
+
   lowPass.type = 'lowpass'
   highPass.type = 'highpass'
 
@@ -51,6 +59,7 @@ export const createAudioGraph = (): AudioGraph => {
   delay.delayTime.value = 0
   reverbGain.gain.value = 0
   dryGain.gain.value = 1
+  pitchShift.pitch = 0
 
   let connected = false
 
@@ -61,7 +70,10 @@ export const createAudioGraph = (): AudioGraph => {
   const ensureConnections = () => {
     if (connected) return
 
-    highPass.connect(lowPass)
+    // Connect pitch shift to filters (pitch shift goes first in chain)
+    highPass.connect(pitchShift.input as any)
+    pitchShift.connect(lowPass)
+    
     lowPass.connect(delay)
     delay.connect(feedback)
     feedback.connect(delay)
@@ -114,6 +126,10 @@ export const createAudioGraph = (): AudioGraph => {
     impulseCache.clear()
     noiseBuffer = null
     vinylBuffer = null
+    
+    // Dispose Tone.js node
+    pitchShift.dispose()
+    
     // close may reject if already closed; ignore errors intentionally
     try {
       await context.close()
@@ -135,6 +151,7 @@ export const createAudioGraph = (): AudioGraph => {
       convolver,
       reverbGain,
       dryGain,
+      pitchShift,
     },
     ensureConnections,
     getNoiseBuffer: getNoise,
