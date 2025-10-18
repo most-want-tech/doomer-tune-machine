@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChangeEvent, DragEvent } from 'react'
+import type { ChangeEvent } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
-import { CloudArrowUp, Play, Pause, Stop, DownloadSimple, FloppyDisk, Trash, Info } from '@phosphor-icons/react'
+import { DownloadSimple, FloppyDisk, Trash, Info } from '@phosphor-icons/react'
 import { useAudioProcessor, DEFAULT_EFFECTS, type AudioEffects } from '@/hooks/use-audio-processor'
 import { WaveformDisplay } from '@/components/waveform-display'
 import { AppHeader, AppFooter } from '@/components/layout'
+import { AudioUpload, PlaybackControls, VolumeControl, formatTime } from '@/features/audio-player'
 import { toast, Toaster } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { exportVideo, type VideoExportProgress, type VideoExportStage } from '@/video/video-exporter'
@@ -82,7 +83,6 @@ function App() {
   const [fileName, setFileName] = useState<string>('')
   const [effects, setEffects] = useState<AudioEffects>(DEFAULT_EFFECTS)
   const [volume, setVolume] = useState(0.7)
-  const [isDragging, setIsDragging] = useState(false)
   const [isAudioExporting, setIsAudioExporting] = useState(false)
   const [audioExportProgress, setAudioExportProgress] = useState(0)
   const [videoImage, setVideoImage] = useState<File | null>(null)
@@ -95,7 +95,6 @@ function App() {
   const [newPresetName, setNewPresetName] = useState('')
   const [isPresetDialogOpen, setIsPresetDialogOpen] = useState(false)
   
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   
   const {
@@ -113,46 +112,9 @@ function App() {
   } = useAudioProcessor()
 
   const handleFileSelect = async (file: File) => {
-    if (!file.type.startsWith('audio/')) {
-      toast.error('Please upload an audio file (MP3, WAV, OGG)')
-      return
-    }
-
-    try {
-      const buffer = await loadAudioFile(file)
-      setAudioBuffer(buffer)
-      setFileName(file.name)
-      toast.success('Audio loaded successfully')
-    } catch (error) {
-      toast.error('Failed to load audio file')
-      console.error(error)
-    }
-  }
-
-  const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      handleFileSelect(file)
-    }
-  }
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      handleFileSelect(file)
-    }
-  }
-
-  const handleDragOver = (e: DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = () => {
-    setIsDragging(false)
+    const buffer = await loadAudioFile(file)
+    setAudioBuffer(buffer)
+    setFileName(file.name)
   }
 
   const handleEffectChange = (key: keyof AudioEffects, value: number | boolean) => {
@@ -161,8 +123,7 @@ function App() {
     updateEffects(newEffects)
   }
 
-  const handleVolumeChange = (value: number[]) => {
-    const vol = value[0]
+  const handleVolumeChange = (vol: number) => {
     setVolume(vol)
     setAudioVolume(vol)
   }
@@ -346,12 +307,6 @@ function App() {
     toast.success(`Deleted preset "${presetName}"`)
   }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <Toaster position="top-center" theme="dark" />
@@ -359,32 +314,7 @@ function App() {
         <div className="max-w-6xl mx-auto space-y-6">
           <AppHeader />
 
-          <Card className="p-6">
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-                isDragging
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border hover:border-primary/50'
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*"
-                onChange={handleFileInput}
-                className="hidden"
-              />
-              <CloudArrowUp className="mx-auto mb-4 text-primary" size={48} />
-              <p className="text-lg mb-2">
-                {fileName || 'Drop your audio file here or click to browse'}
-              </p>
-              <p className="text-sm text-muted-foreground">Supports MP3, WAV, OGG</p>
-            </div>
-          </Card>
+          <AudioUpload fileName={fileName} onFileSelect={handleFileSelect} />
 
           {audioBuffer && (
             <>
@@ -401,29 +331,14 @@ function App() {
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
                   
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={isPlaying ? pause : play}
-                      variant="default"
-                      size="lg"
-                    >
-                      {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-                    </Button>
-                    <Button onClick={() => stop()} variant="secondary" size="lg">
-                      <Stop size={20} />
-                    </Button>
-                  </div>
+                  <PlaybackControls
+                    isPlaying={isPlaying}
+                    onPlay={play}
+                    onPause={pause}
+                    onStop={stop}
+                  />
                   
-                  <div className="flex items-center gap-2 w-32">
-                    <Label className="text-xs">Vol</Label>
-                    <Slider
-                      value={[volume]}
-                      onValueChange={handleVolumeChange}
-                      max={1}
-                      step={0.01}
-                      className="flex-1"
-                    />
-                  </div>
+                  <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
                 </div>
               </Card>
 
