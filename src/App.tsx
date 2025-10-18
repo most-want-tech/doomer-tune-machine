@@ -16,40 +16,13 @@ function App() {
   const [volume, setVolume] = useState(0.7)
   
   const { presets, savePreset, loadPreset, deletePreset } = usePresets()
-  
   const {
-    loadAudioFile,
-    play,
-    pause,
-    stop,
-    seek,
-    setVolume: setAudioVolume,
-    updateEffects,
-    exportAudio,
-    isPlaying,
-    currentTime,
-    duration,
+    loadAudioFile, play, pause, stop, seek, setVolume: setAudioVolume,
+    updateEffects, exportAudio, isPlaying, currentTime, duration,
   } = useAudioProcessor()
-
-  const { isAudioExporting, audioExportProgress, handleAudioExport } = useAudioExport({
-    audioBuffer,
-    fileName,
-    exportAudio,
-  })
-
-  const { isVideoExporting, videoExportProgress, videoExportStage, handleVideoExport } = useVideoExport({
-    audioBuffer,
-    fileName,
-  })
-
-  const {
-    videoImage,
-    imagePreviewUrl,
-    videoOrientation,
-    imageInputRef,
-    setVideoOrientation,
-    handleImageInput,
-  } = useVideoImage()
+  const { isAudioExporting, audioExportProgress, handleAudioExport } = useAudioExport({ audioBuffer, fileName, exportAudio })
+  const { isVideoExporting, videoExportProgress, videoExportStage, handleVideoExport } = useVideoExport({ audioBuffer, fileName })
+  const { videoImage, imagePreviewUrl, videoOrientation, imageInputRef, setVideoOrientation, handleImageInput } = useVideoImage()
 
   const handleFileSelect = async (file: File) => {
     const buffer = await loadAudioFile(file)
@@ -68,22 +41,12 @@ function App() {
     setAudioVolume(vol)
   }
 
-  const handleLoadPreset = (presetName: string) => {
-    loadPreset(presetName)
-    const preset = presets.find(p => p.name === presetName)
-    if (preset) {
-      setEffects(preset.effects)
-      updateEffects(preset.effects)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <Toaster position="top-center" theme="dark" />
       <TooltipProvider>
         <div className="max-w-6xl mx-auto space-y-6">
           <AppHeader />
-
           <AudioUpload fileName={fileName} onFileSelect={handleFileSelect} />
 
           {audioBuffer && (
@@ -107,7 +70,13 @@ function App() {
                 presetControls={
                   <PresetControls
                     presets={presets}
-                    onLoad={handleLoadPreset}
+                    onLoad={(name) => {
+                      const preset = loadPreset(name)
+                      if (preset) {
+                        setEffects(preset)
+                        updateEffects(preset)
+                      }
+                    }}
                     onSave={(name) => savePreset(name, effects)}
                     onDelete={deletePreset}
                   />
