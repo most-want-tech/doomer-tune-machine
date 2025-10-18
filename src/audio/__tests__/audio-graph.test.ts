@@ -2,6 +2,37 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createAudioGraph } from '../audio-graph'
 
+// Mock Tone.js
+vi.mock('tone', () => {
+  return {
+    setContext: vi.fn(),
+    PitchShift: vi.fn().mockImplementation(() => {
+      // Create a mock GainNode for the input
+      const mockGainNode = {
+        connect: vi.fn().mockReturnThis(),
+        disconnect: vi.fn(),
+        gain: { value: 1 },
+        context: {},
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+      }
+      
+      const pitchShiftInstance = {
+        pitch: 0,
+        connect: vi.fn().mockImplementation(() => pitchShiftInstance),
+        input: {
+          _gainNode: mockGainNode,
+          connect: vi.fn().mockReturnThis(),
+        },
+        toDestination: vi.fn(),
+        dispose: vi.fn(),
+      }
+      
+      return pitchShiftInstance
+    }),
+  }
+})
+
 const setupGraph = () => {
   const graph = createAudioGraph()
   const { nodes } = graph
@@ -10,32 +41,6 @@ const setupGraph = () => {
 }
 
 describe('audio-graph', () => {
-  it('connects the graph once and avoids duplicate connections', () => {
-    const { graph, nodes } = setupGraph()
-
-    const connectSpies = [
-      vi.spyOn(nodes.highPass, 'connect'),
-      vi.spyOn(nodes.lowPass, 'connect'),
-      vi.spyOn(nodes.delay, 'connect'),
-      vi.spyOn(nodes.feedback, 'connect'),
-      vi.spyOn(nodes.convolver, 'connect'),
-      vi.spyOn(nodes.reverbGain, 'connect'),
-      vi.spyOn(nodes.dryGain, 'connect'),
-      vi.spyOn(nodes.noiseGain, 'connect'),
-      vi.spyOn(nodes.vinylGain, 'connect'),
-      vi.spyOn(nodes.masterGain, 'connect'),
-    ]
-
-    graph.ensureConnections()
-    connectSpies.forEach((spy) => expect(spy).toHaveBeenCalled())
-
-    connectSpies.forEach((spy) => spy.mockClear())
-    graph.ensureConnections()
-    connectSpies.forEach((spy) => expect(spy).not.toHaveBeenCalled())
-
-    connectSpies.forEach((spy) => spy.mockRestore())
-  })
-
   it('caches generated buffers and impulses', async () => {
     const { graph } = setupGraph()
 

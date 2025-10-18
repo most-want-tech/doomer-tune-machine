@@ -1,3 +1,4 @@
+import * as Tone from 'tone'
 import type { AudioEffects } from './audio-effects'
 import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer } from './audio-utils'
 import { audioBufferToWav } from './wav-encoder'
@@ -5,8 +6,8 @@ import { audioBufferToWav } from './wav-encoder'
 const VINYL_GAIN = 0.15
 
 const getPlaybackRateFactor = (effects: AudioEffects) => {
-  const pitchFactor = Math.pow(2, effects.pitchShift / 12)
-  return effects.playbackRate * pitchFactor
+  // Playback rate now ONLY controls speed, not pitch
+  return effects.playbackRate
 }
 
 const shouldResample = (rateFactor: number) => Math.abs(rateFactor - 1) > 1e-6
@@ -72,6 +73,10 @@ const configureGraph = (
   const reverbGain = offlineContext.createGain()
   const dryGain = offlineContext.createGain()
 
+  // Create Tone.js context and PitchShift for offline rendering
+  Tone.setContext(offlineContext as any)
+  const pitchShift = new Tone.PitchShift(effects.pitchShift)
+
   lowPass.type = 'lowpass'
   highPass.type = 'highpass'
 
@@ -84,8 +89,10 @@ const configureGraph = (
   reverbGain.gain.value = effects.reverbMix
   dryGain.gain.value = 1 - effects.reverbMix
 
+  // Connect audio chain with pitch shift
   source.connect(highPass)
-  highPass.connect(lowPass)
+  highPass.connect(pitchShift.input as any)
+  pitchShift.connect(lowPass as any)
   lowPass.connect(delay)
   delay.connect(feedback)
   feedback.connect(delay)

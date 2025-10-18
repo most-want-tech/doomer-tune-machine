@@ -110,7 +110,7 @@ Tests are automatically run via GitHub Actions on pull requests and pushes to `d
 - **Build Tool**: Vite
 - **UI Components**: Shadcn/ui (Radix primitives)
 - **Styling**: Tailwind CSS
-- **Audio Processing**: Web Audio API (native, no external libraries)
+- **Audio Processing**: Web Audio API + Tone.js (for advanced pitch shifting)
 - **Video Export**: WebCodecs API
 - **State Management**: React hooks + @github/spark KV storage
 - **Testing**: Vitest
@@ -118,12 +118,19 @@ Tests are automatically run via GitHub Actions on pull requests and pushes to `d
 
 ## 🎛️ Available Effects
 
-- **Reverb**: Simulated room ambience with decay time control
-- **Distortion**: Waveshaping distortion for grit and saturation
+### Implemented ✅
+- **Reverb**: Simulated room ambience with decay time and mix controls
+- **Delay**: Echo effect with time and feedback controls
 - **Lowpass Filter**: Frequency cutoff for muffled, lo-fi sound
-- **Vinyl Crackle**: Simulated vinyl noise
+- **Highpass Filter**: Remove low frequencies and bass rumble
+- **Vinyl Crackle**: Simulated vinyl noise and pops
+- **Noise Level**: Analog-style background noise for vintage tape feel
+- **Pitch Shift**: Independent pitch control (-12 to +12 semitones) *powered by Tone.js*
+- **Playback Speed**: Independent tempo control (0.25x to 2x) without affecting pitch
+
+### Coming Soon 🚧
+- **Distortion**: Waveshaping distortion for grit and saturation
 - **Bitcrusher**: Sample rate and bit depth reduction for digital degradation
-- **Pitch Shift**: Playback rate manipulation (-12 to +12 semitones)
 - **Chorus**: Modulated delay effect for depth
 - **Tape Warble**: Pitch modulation simulating tape speed variations
 - **Auto-pan**: Stereo panning automation

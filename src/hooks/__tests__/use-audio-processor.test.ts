@@ -143,6 +143,12 @@ const createGraphMock = (): GraphMock => {
     convolver: createConvolverNodeStub(),
     reverbGain: createGainNodeStub(),
     dryGain: createGainNodeStub(),
+    pitchShift: {
+      pitch: 0,
+      connect: vi.fn(),
+      input: { connect: vi.fn() },
+      dispose: vi.fn(),
+    },
   }
 
   return {
@@ -267,7 +273,12 @@ describe('useAudioProcessor', () => {
 
     const mainSource = graphMock.bufferSources[0]
     expect(mainSource.playbackRate.setValueAtTime).toHaveBeenCalled()
-    expect(mainSource.playbackRate.value).toBeCloseTo(3)
+    // Playback rate should now be independent of pitch shift
+    expect(mainSource.playbackRate.value).toBeCloseTo(1.5)
+    // Pitch shift should be compensated for playback rate
+    // compensatedPitch = 12 - (12 * log2(1.5)) = 12 - 7.019... ≈ 4.98
+    const expectedPitch = 12 - 12 * Math.log2(1.5)
+    expect(graphMock.nodes.pitchShift.pitch).toBeCloseTo(expectedPitch, 2)
 
     ;(graphMock.context as unknown as { currentTime: number }).currentTime = 0.75
 
@@ -275,7 +286,9 @@ describe('useAudioProcessor', () => {
       result.current.pause()
     })
 
-    expect(result.current.currentTime).toBeCloseTo(1)
+    // With playback rate 1.5, advancing 0.25s real time = 0.375s audio time
+    // Starting from 0.5s + 0.375s = 0.875s
+    expect(result.current.currentTime).toBeCloseTo(0.875)
   })
 
   it('exports audio through the offline renderer', async () => {

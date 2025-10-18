@@ -49,8 +49,8 @@ export function AudioUpload({ fileName, onFileSelect }: AudioUploadProps) {
       await onFileSelect(file)
       toast.success('Audio loaded successfully')
     } catch (error) {
+      console.error('Failed to load audio file:', error)
       toast.error('Failed to load audio file')
-      console.error(error)
     }
   }
 

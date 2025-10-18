@@ -90,7 +90,10 @@ When adding new audio effects:
 - Use `@/` path alias for src imports
 
 ### Audio Libraries
-- **NO external audio libraries** - uses native Web Audio API exclusively
+- **Primary**: Native Web Audio API for basic audio processing
+- **Tone.js**: Used for advanced effects requiring complex DSP (pitch shifting, time stretching)
+  - Provides `PitchShift` node for independent pitch control without affecting playback speed
+  - Wrap Tone.js nodes in audio graph, maintain Web Audio API as primary interface
 - Canvas-based waveform rendering without external visualization libs
 - Export uses `OfflineAudioContext` for non-realtime high-quality rendering
 - Audio processing utilities in `src/audio/` (audio-effects, audio-graph, audio-utils, offline-renderer, wav-encoder)
