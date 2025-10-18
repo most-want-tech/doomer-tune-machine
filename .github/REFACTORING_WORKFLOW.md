@@ -1,122 +1,166 @@
-# Refactoring Workflow Guide
+# Feature Development Workflow
 
 ## Overview
-This document outlines the standard workflow for major refactoring tasks in the Doomer Tune Machine project.
+This document outlines the standard workflow for all feature development, bug fixes, and improvements in the Doomer Tune Machine project. This workflow applies to both small features and large refactoring tasks.
 
 ---
 
 ## 🎯 When to Use This Workflow
 
 Use this workflow for:
-- Large component refactoring (>500 lines)
-- Architecture changes
-- Feature extraction/reorganization
-- Performance optimizations requiring structural changes
-- Migration to new patterns or libraries
+- **New features** - Adding audio effects, UI components, export formats
+- **Bug fixes** - Addressing reported issues or edge cases
+- **Refactoring** - Improving code structure (>500 lines)
+- **Performance optimizations** - Speed improvements or bundle size reduction
+- **Architecture changes** - Pattern migrations or structural updates
+- **Documentation** - Significant documentation additions or updates
+
+**Core Principle:** Every change starts with an issue, gets its own branch, and follows a consistent process.
 
 ---
 
 ## 📋 Step-by-Step Workflow
 
-### 1. **Create Refactoring Plan Document**
+### 1. **Identify & Plan the Work**
 
-Create a detailed plan document in the root directory:
+Before creating an issue, understand what needs to be done:
 
-```bash
-# Example: REFACTOR_PLAN.md
-touch REFACTOR_PLAN_[FEATURE_NAME].md
-```
+**For Features:**
+- What problem does this solve?
+- What's the user benefit?
+- Are there design mockups or requirements?
 
+**For Refactoring/Large Changes:**
+- Create a detailed plan document (optional but recommended):
+  ```bash
+  # Example: REFACTOR_PLAN.md, FEATURE_PLAN.md
+  touch PLAN_[FEATURE_NAME].md
+  ```
+  
 **Plan should include:**
-- Current state analysis (problems identified)
-- Refactoring objectives
-- Proposed architecture/folder structure
-- Implementation phases (broken into reviewable chunks)
-- Success metrics (LOC reduction, performance, testability)
-- Best practices applied with references
-- Migration strategy
-- Completion criteria
+- Current state / problem statement
+- Objectives / goals
+- Proposed solution / architecture
+- Implementation approach (phases if large)
+- Success criteria / acceptance criteria
+- References / best practices
 
-**Template:** See `REFACTOR_PLAN.md` for reference
+**Template:** See `REFACTOR_PLAN.md` for a comprehensive example
 
 ---
 
 ### 2. **Create GitHub Issue**
 
-Create a comprehensive GitHub issue:
+Go to GitHub and create a new issue describing the work:
+
+**Navigate to:**
+```
+https://github.com/most-want-tech/doomer-tune-machine/issues/new
+```
 
 **Title Format:**
 ```
-[REFACTOR] <Component/Feature Name>: <Brief Description>
+[TYPE] Brief descriptive title
+
+Types:
+- [FEATURE] - New functionality
+- [BUG] - Bug fix
+- [REFACTOR] - Code improvements
+- [DOCS] - Documentation
+- [PERF] - Performance improvements
 ```
 
-**Example:**
+**Examples:**
 ```
-[REFACTOR] App.tsx: Break down monolithic component into feature-based architecture
+[FEATURE] Add vinyl crackle effect to audio processor
+[BUG] Waveform display not updating on seek
+[REFACTOR] App.tsx: Break down into feature-based architecture
+[PERF] Optimize audio buffer rendering
 ```
 
 **Issue Template:**
 
 ```markdown
-## 📊 Problem Statement
-[Describe the current issues: size, complexity, maintainability concerns]
+## 📊 Description
+[Clear description of the feature, bug, or improvement]
 
-## 🎯 Goals
-[List specific, measurable goals]
+## 🎯 Goals / Why
+[What problem does this solve? What's the benefit?]
 
-## 📁 Proposed Solution
-[High-level architecture overview - link to detailed plan]
+## 📁 Proposed Solution (if applicable)
+[High-level approach or implementation idea]
 
-## 📝 Implementation Phases
-- [ ] Phase 1: [Description] - Estimated: X hours
-- [ ] Phase 2: [Description] - Estimated: X hours
-- [ ] Phase 3: [Description] - Estimated: X hours
-[etc.]
+## 📝 Tasks / Checklist
+- [ ] Task 1
+- [ ] Task 2
+- [ ] Task 3
 
-## 📚 References
-- Link to detailed plan: [REFACTOR_PLAN.md](./REFACTOR_PLAN.md)
-- Best practices documentation
-- Related issues/PRs
+## 📚 References (if applicable)
+- Link to plan document (if created)
+- Related issues or PRs
+- External documentation
 
 ## ✅ Acceptance Criteria
-- [ ] All phases completed
-- [ ] Tests passing
+- [ ] Feature works as described
+- [ ] Tests added/updated
 - [ ] No regressions
 - [ ] Documentation updated
-- [ ] Code reviewed
 ```
 
-**Labels to Add:**
-- `refactor`
-- `enhancement`
-- `documentation`
-- Priority label (`priority: high`, `priority: medium`, etc.)
+**Add Labels:**
+Choose appropriate labels based on the work:
+- Type: `feature`, `bug`, `refactor`, `documentation`, `performance`
+- Priority: `priority: high`, `priority: medium`, `priority: low`
+- Status: `good first issue`, `help wanted` (if applicable)
 
 **Assign:**
-- Assignee: Developer responsible
-- Project: Link to project board (if applicable)
-- Milestone: Target release (if applicable)
+- **Assignee:** Yourself or team member responsible
+- **Project:** `doomermixerplus` (if using project boards)
+- **Milestone:** Target release version (if applicable)
 
 ---
 
 ### 3. **Create Feature Branch**
 
-Branch naming convention:
-```bash
-refactor/<scope>-<brief-description>
+Start from the latest code on your default branch (usually `main` or `dev`):
 
-# Examples:
-git checkout -b refactor/app-component-architecture
-git checkout -b refactor/phase-1-layout-components
-git checkout -b refactor/effects-feature-extraction
+```bash
+# Make sure you're up to date
+git checkout dev  # or main
+git pull origin dev
+
+# Create your feature branch
+git checkout -b <type>/<brief-description>
 ```
 
-**For multi-phase refactors:**
+**Branch Naming Convention:**
+```
+<type>/<scope>-<brief-description>
+
+Types:
+- feature/  - New features
+- fix/      - Bug fixes
+- refactor/ - Code refactoring
+- docs/     - Documentation
+- perf/     - Performance improvements
+- test/     - Adding tests
+```
+
+**Examples:**
 ```bash
-# Create main refactor branch
+git checkout -b feature/vinyl-crackle-effect
+git checkout -b fix/waveform-seek-bug
+git checkout -b refactor/app-component-architecture
+git checkout -b docs/api-documentation
+git checkout -b perf/optimize-audio-rendering
+```
+
+**For multi-phase work:**
+```bash
+# Create main branch for the feature
 git checkout -b refactor/app-component-architecture
 
-# Create phase branches
+# Create sub-branches for each phase (branch from main branch)
 git checkout -b refactor/phase-1-layout-components
 git checkout -b refactor/phase-2-audio-player
 # etc.
@@ -124,90 +168,195 @@ git checkout -b refactor/phase-2-audio-player
 
 ---
 
-### 4. **Link Issue to Branch**
+### 4. **Link Branch to Issue**
 
-In the GitHub issue, reference the branch:
-```markdown
-Branch: `refactor/app-component-architecture`
+There are several ways to link your branch to the GitHub issue:
+
+**Option A: Use GitHub UI** (Easiest)
+1. Go to your issue on GitHub
+2. Look for "Development" in the right sidebar
+3. Click "Create a branch" or "Link a branch"
+4. Select your existing branch
+
+**Option B: Reference in Commit Message**
+Include the issue number in your commit messages:
+```bash
+git commit -m "feat: add vinyl crackle effect
+
+Adds configurable vinyl crackle to audio processor.
+
+Closes #42"
 ```
 
-Or use GitHub's development sidebar to link the branch.
+**Option C: Reference in Issue Comment**
+Comment on the issue:
+```markdown
+Working on this in branch: `feature/vinyl-crackle-effect`
+```
+
+**Option D: Use Branch Naming with Issue Number**
+```bash
+git checkout -b feature/42-vinyl-crackle-effect
+# GitHub automatically links branches with issue numbers
+```
 
 ---
 
-### 5. **Implementation - Incremental Approach**
+### 5. **Implement the Work**
 
-**For each phase:**
+Now you're ready to code! Follow these best practices:
 
-1. **Create phase branch** (if multi-phase)
+**Implementation Guidelines:**
+
+1. **Keep commits atomic and descriptive**
+   - Each commit should be a logical unit of work
+   - One feature/fix per commit when possible
+   - Commit frequently to save progress
+
+2. **Write clear commit messages**
    ```bash
-   git checkout -b refactor/phase-X-description
+   git commit -m "type(scope): brief description
+   
+   - Detailed change 1
+   - Detailed change 2
+   - Detailed change 3
+   
+   References #[ISSUE_NUMBER]"
    ```
 
-2. **Implement changes**
-   - Follow the plan document
-   - Keep commits atomic and descriptive
-   - Update tests as you go
+3. **Test as you go**
+   - Don't wait until the end to test
+   - Run tests locally: `npm test`
+   - Test in the browser: `npm run dev`
+   - Check for console errors
 
-3. **Commit with clear messages**
+4. **Keep your branch updated**
    ```bash
-   git commit -m "refactor(phase-1): extract layout components
-   
-   - Create AppHeader component
-   - Create AppFooter component
-   - Update App.tsx to use new components
-   - Reduces App.tsx by 30 lines
-   
-   Part of #[ISSUE_NUMBER]"
+   # Periodically sync with dev/main to avoid conflicts
+   git checkout dev
+   git pull origin dev
+   git checkout your-feature-branch
+   git merge dev
+   # Or use rebase: git rebase dev
    ```
 
-4. **Push and create PR**
+5. **Push your changes regularly**
    ```bash
-   git push origin refactor/phase-X-description
+   # First time pushing the branch
+   git push -u origin feature/your-branch-name
+   
+   # Subsequent pushes
+   git push
    ```
 
-5. **PR Template:**
-   ```markdown
-   ## Phase X: [Description]
-   
-   Part of #[ISSUE_NUMBER]
-   
-   ### Changes
-   - [List specific changes]
-   
-   ### Files Created
-   - `path/to/file1.tsx`
-   - `path/to/file2.tsx`
-   
-   ### Files Modified
-   - `src/App.tsx` (-XX lines)
-   
-   ### Testing
-   - [ ] Manual testing completed
-   - [ ] Unit tests added/updated
-   - [ ] No regressions found
-   
-   ### Checklist
-   - [ ] Follows project coding standards
-   - [ ] Documentation updated
-   - [ ] No console errors/warnings
-   - [ ] Linting passes
-   - [ ] Builds successfully
+### 6. **Create Pull Request**
+
+When your work is ready for review, create a Pull Request:
+
+**Navigate to GitHub:**
+```
+https://github.com/most-want-tech/doomer-tune-machine/pulls
+```
+
+Or use the link GitHub provides when you push:
+```bash
+git push
+# Output includes: "Create a pull request for 'your-branch' on GitHub by visiting: [URL]"
+```
+
+**PR Title Format:**
+```
+[TYPE] Brief description (references #ISSUE)
+
+Examples:
+[FEATURE] Add vinyl crackle effect (#42)
+[FIX] Resolve waveform seek bug (#38)
+[REFACTOR] Phase 1: Extract layout components (#55)
+```
+
+**PR Description Template:**
+```markdown
+## Description
+Brief summary of what this PR does.
+
+Closes #[ISSUE_NUMBER]
+
+## Changes
+- Specific change 1
+- Specific change 2
+- Specific change 3
+
+## Type of Change
+- [ ] New feature
+- [ ] Bug fix
+- [ ] Refactoring
+- [ ] Documentation
+- [ ] Performance improvement
+
+## Testing
+- [ ] Manual testing completed
+- [ ] Unit tests added/updated
+- [ ] All tests passing (`npm test`)
+- [ ] No console errors/warnings
+- [ ] Tested in development mode
+
+## Checklist
+- [ ] Code follows project style guidelines
+- [ ] Self-reviewed my code
+- [ ] Commented complex logic
+- [ ] Documentation updated (if needed)
+- [ ] No new warnings/errors
+- [ ] Builds successfully (`npm run build`)
+
+## Screenshots (if applicable)
+[Add screenshots for UI changes]
+```
+
+**Request Review:**
+- Assign reviewers (team members)
+- Add labels matching the issue
+- Link to the original issue
+- Add to project board (if applicable)
+
+**Address Feedback:**
+- Respond to review comments
+- Make requested changes
+- Push updates to the same branch
+- Re-request review when ready
+
+**Merge:**
+- Wait for approval from reviewers
+- Ensure CI/CD checks pass
+- Use "Squash and merge" or "Merge commit" based on project preference
+- Delete the branch after merging (GitHub will prompt you)
+
+### 7. **Post-Merge Cleanup**
+
+After your PR is merged:
+
+1. **Update local repository**
+   ```bash
+   git checkout dev  # or main
+   git pull origin dev
    ```
 
-6. **Review and merge**
-   - Request review from team
-   - Address feedback
-   - Merge when approved
-   - Delete phase branch
+2. **Delete local branch** (optional but recommended)
+   ```bash
+   git branch -d feature/your-branch-name
+   ```
 
-7. **Update main issue**
-   - Check off completed phase
-   - Update progress comments
+3. **Update the issue**
+   - GitHub should auto-close if you used "Closes #XX" in PR
+   - If not, manually close the issue
+   - Add final comments if needed
+
+4. **Celebrate! 🎉**
+   - You've successfully contributed to the project
+   - Your changes are now in the main codebase
 
 ---
 
-### 6. **Testing Strategy**
+### 8. **Testing Strategy**
 
 For each phase:
 
@@ -230,7 +379,7 @@ For each phase:
 
 ---
 
-### 7. **Documentation Updates**
+### 9. **Documentation Updates**
 
 Update relevant documentation:
 
@@ -242,59 +391,224 @@ Update relevant documentation:
 
 ---
 
-### 8. **Final Integration**
+## 🔄 Complete Workflow Summary
 
-After all phases completed:
+**Quick Reference:**
 
-1. **Final testing**
-   ```bash
-   npm run build
-   npm run test
-   npm run lint
-   ```
+```
+1. Plan         → Understand what needs to be done
+2. Issue        → Create GitHub issue with details
+3. Branch       → Create feature branch from dev/main
+4. Code         → Implement changes with atomic commits
+5. Test         → Test thoroughly as you develop
+6. Push         → Push changes to GitHub
+7. PR           → Create Pull Request with description
+8. Review       → Address feedback from reviewers
+9. Merge        → Merge when approved
+10. Cleanup     → Update local repo, close issue
+```
 
-2. **Update metrics in issue**
-   - LOC reduction achieved
-   - Number of components created
-   - Test coverage improved
-   - Build size changes
+**Visual Flow:**
+```
+┌─────────────┐
+│   Plan      │ Think through the solution
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Issue     │ Document on GitHub (#42)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Branch    │ git checkout -b feature/my-feature
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Code      │ Make changes, commit often
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Push      │ git push -u origin feature/my-feature
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   PR        │ Create Pull Request
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Review    │ Team reviews & provides feedback
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Merge     │ Approved → Merged to dev/main
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Complete!  │ Issue closed, feature shipped! 🎉
+└─────────────┘
+```
 
-3. **Close issue with summary**
-   ```markdown
-   ## ✅ Refactor Complete
-   
-   ### Results
-   - App.tsx: 894 → 120 lines (86.5% reduction)
-   - Components created: 25
-   - Test coverage: 45% → 72%
-   - Bundle size: -3KB
-   
-   ### Phases Completed
-   - [x] Phase 1: Layout Components
-   - [x] Phase 2: Audio Player
-   - [x] Phase 3: Effects
-   - [x] Phase 4: Presets
-   - [x] Phase 5: Export
-   - [x] Phase 6: Waveform
-   - [x] Phase 7: Final Cleanup
-   
-   All acceptance criteria met. Deployed in v2.0.0.
-   ```
+---
 
-4. **Tag release** (if appropriate)
-   ```bash
-   git tag -a v2.0.0 -m "Major refactor: Feature-based architecture"
-   git push origin v2.0.0
-   ```
+## 🎓 Additional Workflows
+
+### For Large Features/Refactors
+
+When working on something that takes multiple PRs:
+
+**Create an Epic/Parent Issue:**
+```markdown
+## Epic: App.tsx Refactoring
+
+Breaking down the monolithic App.tsx into feature modules.
+
+### Sub-tasks:
+- [ ] #43 - Phase 1: Layout components
+- [ ] #44 - Phase 2: Audio player feature
+- [ ] #45 - Phase 3: Effects feature
+- [ ] #46 - Phase 4: Presets feature
+- [ ] #47 - Phase 5: Export features
+- [ ] #48 - Phase 6: Waveform feature
+- [ ] #49 - Phase 7: Final cleanup
+
+### Overall Progress: 0/7 phases complete
+```
+
+**Create Individual Issues for Each Phase:**
+- Each phase gets its own issue
+- Each phase gets its own branch
+- Each phase gets its own PR
+- Reference the parent issue in each sub-issue
+
+**Branch Strategy:**
+```bash
+# Main feature branch (long-lived)
+git checkout -b refactor/app-component-architecture
+
+# Phase branches (merge back to main feature branch)
+git checkout -b refactor/phase-1-layout-components
+# Work, commit, push, PR → merge to refactor/app-component-architecture
+
+git checkout refactor/app-component-architecture
+git checkout -b refactor/phase-2-audio-player
+# Work, commit, push, PR → merge to refactor/app-component-architecture
+# ... repeat for all phases
+
+# Finally merge main feature branch to dev
+git checkout dev
+git merge refactor/app-component-architecture
+```
+
+---
+
+## 🚨 Common Scenarios
+
+### Scenario: Found a Bug While Working
+
+**Option A:** Fix it in the same branch (if related)
+```bash
+# Just commit the fix as part of your work
+git commit -m "fix: resolve bug found during feature development"
+```
+
+**Option B:** Create a separate hotfix (if unrelated)
+```bash
+# Stash your current work
+git stash
+
+# Create hotfix branch from dev
+git checkout dev
+git checkout -b fix/critical-bug
+# Fix the bug, commit, push, create PR
+
+# Go back to your feature branch
+git checkout feature/your-feature
+git stash pop
+```
+
+### Scenario: Need to Update from Main Branch
+
+```bash
+# Your branch is behind dev/main
+git checkout dev
+git pull origin dev
+git checkout feature/your-branch
+git merge dev
+# Resolve any conflicts
+git commit -m "merge: update from dev"
+git push
+```
+
+### Scenario: Made a Mistake in Last Commit
+
+**Before pushing:**
+```bash
+# Undo last commit, keep changes
+git reset --soft HEAD~1
+# Make corrections
+git add .
+git commit -m "your corrected message"
+```
+
+**After pushing:**
+```bash
+# Make corrections
+git add .
+git commit -m "fix: correct previous commit"
+git push
+```
+
+### Scenario: Want to Try Something Without Committing
+
+```bash
+# Save your current work
+git stash
+
+# Try something experimental
+# ... make changes ...
+
+# Discard experimental changes, restore your work
+git checkout .
+git stash pop
+```
+
+---
+
+## 📊 Workflow Checklist
+
+Use this checklist for each feature/task:
+
+- [ ] **Plan**: Understand what needs to be done
+- [ ] **Issue**: Create GitHub issue with clear description
+- [ ] **Labels**: Add appropriate labels to issue
+- [ ] **Assign**: Assign to yourself or team member
+- [ ] **Branch**: Create feature branch with descriptive name
+- [ ] **Link**: Link branch to issue
+- [ ] **Code**: Implement changes with atomic commits
+- [ ] **Test**: Test thoroughly (manual + automated)
+- [ ] **Push**: Push changes to GitHub regularly
+- [ ] **PR**: Create Pull Request with clear description
+- [ ] **Review**: Address reviewer feedback
+- [ ] **Merge**: Merge when approved
+- [ ] **Cleanup**: Delete branch, update local repo
+- [ ] **Close**: Ensure issue is closed
 
 ---
 
 ## 🎨 Commit Message Convention
 
-Follow conventional commits for refactoring:
+Follow conventional commits for consistency:
 
+**Format:**
 ```
-refactor(<scope>): <brief description>
+<type>(<scope>): <brief description>
 
 [Optional body with more details]
 [Optional breaking changes]
@@ -302,27 +616,66 @@ refactor(<scope>): <brief description>
 [Footer with issue references]
 ```
 
+**Types:**
+- `feat` - New feature
+- `fix` - Bug fix
+- `refactor` - Code refactoring
+- `docs` - Documentation changes
+- `style` - Code style changes (formatting, no logic change)
+- `test` - Adding or updating tests
+- `perf` - Performance improvements
+- `chore` - Maintenance tasks (dependencies, config, etc.)
+
 **Examples:**
 ```bash
-refactor(app): extract audio player feature components
+feat(audio): add vinyl crackle effect
 
-- Create AudioUpload, PlaybackControls, VolumeControl
-- Extract useAudioPlayer hook
-- Reduce App.tsx by 150 lines
+Adds configurable vinyl crackle to the audio processor.
+Users can toggle it on/off in the effects panel.
 
-Relates to #42
+Closes #42
 
 ---
 
-refactor(effects): create generic EffectControl component
+fix(waveform): resolve seek position bug
 
-Replace 10 duplicate effect controls with single reusable component.
-Reduces duplication by ~200 lines.
+Waveform now correctly updates when user seeks to a new position.
+Previously would jump back to previous position.
 
-BREAKING CHANGE: EffectControl now requires 'info' prop
+Fixes #38
 
-Closes #42, Part 3/7
+---
+
+refactor(app): extract layout components
+
+- Create AppHeader component with title and description
+- Create AppFooter component with credits
+- Update App.tsx to use new components
+- Reduces App.tsx by 30 lines
+
+Part of #55
+
+---
+
+docs(readme): update installation instructions
+
+Add Node.js version requirement and troubleshooting section.
+
+---
+
+perf(audio): optimize buffer rendering
+
+Reduces audio processing time by 40% through batch operations.
+
+Closes #67
 ```
+
+**Tips:**
+- Keep subject line under 72 characters
+- Use imperative mood ("add" not "added")
+- Reference issues with `Closes #XX`, `Fixes #XX`, or `Part of #XX`
+- Add body for non-trivial changes
+- Use `BREAKING CHANGE:` footer for breaking changes
 
 ---
 
@@ -330,105 +683,194 @@ Closes #42, Part 3/7
 
 **For Reviewers:**
 
-- [ ] Follows the refactoring plan
+### Functionality
+- [ ] Code works as described in the PR
 - [ ] No functionality broken
-- [ ] Code is more maintainable than before
+- [ ] Edge cases handled
+- [ ] Error handling appropriate
+
+### Code Quality
+- [ ] Code is readable and maintainable
+- [ ] Follows project conventions (see `.github/copilot-instructions.md`)
+- [ ] No unnecessary complexity
+- [ ] Proper TypeScript types used
+- [ ] No commented-out code (unless explained)
+
+### Testing
 - [ ] Tests added/updated appropriately
-- [ ] No performance regressions
-- [ ] Documentation updated
-- [ ] Follows project conventions (.github/copilot-instructions.md)
-- [ ] TypeScript types properly defined
-- [ ] No new console warnings/errors
-- [ ] Accessible (ARIA attributes, keyboard nav)
+- [ ] All tests passing
+- [ ] Manual testing performed
+- [ ] No regressions introduced
+
+### Performance
+- [ ] No obvious performance issues
+- [ ] Bundle size impact acceptable
+- [ ] No memory leaks
+
+### Documentation
+- [ ] Code comments for complex logic
+- [ ] Documentation updated (if needed)
+- [ ] README updated (if needed)
+- [ ] CHANGELOG updated (if needed)
+
+### Accessibility
+- [ ] Keyboard navigation works
+- [ ] ARIA attributes used correctly (if UI changes)
+- [ ] Color contrast sufficient
+
+### Security
+- [ ] No sensitive data exposed
+- [ ] Input validation present
+- [ ] No security vulnerabilities introduced
 
 ---
 
-## 🚨 Rollback Strategy
+## 🚨 Troubleshooting
 
-If issues arise after merge:
+### Merge Conflicts
 
-1. **Identify the problematic phase/commit**
-2. **Option A: Fix forward** (preferred for small issues)
-   ```bash
-   git checkout -b hotfix/refactor-regression
-   # Make fixes
-   git commit -m "fix: resolve regression from refactor"
-   ```
+```bash
+# Update your branch with latest dev
+git checkout dev
+git pull origin dev
+git checkout your-feature-branch
+git merge dev
 
-3. **Option B: Revert** (for major issues)
-   ```bash
-   git revert <commit-hash>
-   # or
-   git revert <phase-pr-merge-commit>
-   ```
+# If conflicts occur, Git will mark them in files
+# Edit files to resolve conflicts
+# Look for <<<<<<< HEAD markers
 
-4. **Update issue with findings**
-   - Document what went wrong
-   - Plan improvements for next refactor
+# After resolving
+git add .
+git commit -m "merge: resolve conflicts with dev"
+git push
+```
 
----
+### Accidentally Committed to Wrong Branch
 
-## 📊 Success Metrics Template
+```bash
+# If you haven't pushed yet
+git log  # Note the commit hash
+git reset --hard HEAD~1  # Undo the commit
 
-Track before/after metrics:
+# Switch to correct branch
+git checkout correct-branch
+git cherry-pick <commit-hash>  # Apply that commit here
+```
 
-```markdown
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| Lines of Code (main file) | XXX | YYY | -Z% |
-| Number of Components | X | Y | +Z |
-| Cyclomatic Complexity | X | Y | -Z% |
-| Test Coverage | X% | Y% | +Z% |
-| Bundle Size | X KB | Y KB | ±Z KB |
-| Build Time | X s | Y s | ±Z s |
-| ESLint Warnings | X | Y | -Z |
+### Need to Undo Pushed Changes
+
+```bash
+# Create a revert commit (safe, recommended)
+git revert <commit-hash>
+git push
+
+# Or force reset (dangerous, only if you're sure)
+git reset --hard <commit-hash>
+git push --force
+```
+
+### Lost Changes
+
+```bash
+# Find lost commits
+git reflog
+
+# Recover lost commit
+git checkout <commit-hash>
+git checkout -b recovery-branch
 ```
 
 ---
 
-## 🔗 Resources
+## � Quick Start Examples
 
-- [Bulletproof React - Project Structure](https://github.com/alan2207/bulletproof-react/blob/master/docs/project-structure.md)
-- [React Design Patterns](https://github.com/michelebertoli/react-design-patterns-and-best-practices)
-- [Conventional Commits](https://www.conventionalcommits.org/)
-- [Atomic Commits](https://www.freshconsulting.com/insights/blog/atomic-commits/)
+### Example 1: Simple Bug Fix
+
+```bash
+# 1. Create issue on GitHub: "Waveform not updating on seek" (#38)
+
+# 2. Create branch
+git checkout dev
+git pull
+git checkout -b fix/waveform-seek-bug
+
+# 3. Fix the bug, test it
+# ... make changes ...
+git add src/components/waveform-display.tsx
+git commit -m "fix(waveform): resolve seek position bug
+
+Waveform now correctly updates when user seeks.
+
+Fixes #38"
+
+# 4. Push and create PR
+git push -u origin fix/waveform-seek-bug
+# Click the GitHub link to create PR
+
+# 5. After merge
+git checkout dev
+git pull
+git branch -d fix/waveform-seek-bug
+```
+
+### Example 2: New Feature
+
+```bash
+# 1. Create issue on GitHub: "Add vinyl crackle effect" (#42)
+
+# 2. Create branch
+git checkout dev
+git pull
+git checkout -b feature/vinyl-crackle-effect
+
+# 3. Implement feature with multiple commits
+git add src/audio/audio-effects.ts
+git commit -m "feat(audio): add vinyl crackle effect processor"
+
+git add src/App.tsx src/hooks/use-audio-processor.ts
+git commit -m "feat(ui): add vinyl crackle toggle to effects panel"
+
+git add tests/audio-effects.test.ts
+git commit -m "test(audio): add tests for vinyl crackle effect"
+
+# 4. Push and create PR
+git push -u origin feature/vinyl-crackle-effect
+# Create PR on GitHub
+
+# 5. After approval and merge
+git checkout dev
+git pull
+git branch -d feature/vinyl-crackle-effect
+```
 
 ---
 
-## 📝 Workflow Checklist
+## 📚 Resources
 
-Use this checklist for each refactoring project:
-
-- [ ] Create detailed plan document
-- [ ] Create GitHub issue with labels and assignee
-- [ ] Create feature branch
-- [ ] Link issue to branch
-- [ ] For each phase:
-  - [ ] Create phase branch
-  - [ ] Implement changes
-  - [ ] Write tests
-  - [ ] Create PR
-  - [ ] Code review
-  - [ ] Merge
-  - [ ] Update issue
-- [ ] Final testing
-- [ ] Update documentation
-- [ ] Update metrics
-- [ ] Close issue
-- [ ] Tag release (if appropriate)
+- [GitHub Flow Documentation](https://docs.github.com/en/get-started/quickstart/github-flow)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Atomic Commits](https://www.freshconsulting.com/insights/blog/atomic-commits/)
+- [Git Best Practices](https://www.git-scm.com/book/en/v2)
+- [Writing Good Pull Requests](https://github.blog/2015-01-21-how-to-write-the-perfect-pull-request/)
+- Project Guidelines: `.github/copilot-instructions.md`
 
 ---
 
 ## 💡 Tips for Success
 
-1. **Break it down**: Smaller phases are easier to review and safer to merge
-2. **Test continuously**: Don't wait until the end to test
-3. **Document as you go**: Update docs with each phase
-4. **Communicate**: Keep team informed of progress and blockers
-5. **Be patient**: Good refactoring takes time; don't rush
-6. **Celebrate wins**: Acknowledge progress after each phase
+1. **Start small**: Don't try to do too much in one PR
+2. **Commit often**: Save your progress with atomic commits
+3. **Test early**: Don't wait until the end to test
+4. **Communicate**: Update issue with progress, blockers
+5. **Ask questions**: When stuck, ask in PR comments or team chat
+6. **Review your own PR**: Check your changes before requesting review
+7. **Be responsive**: Address review feedback promptly
+8. **Learn from feedback**: Use reviews as learning opportunities
+9. **Keep PRs focused**: One feature/fix per PR
+10. **Document decisions**: Explain "why" in comments and PRs
 
 ---
 
-**Last Updated:** October 17, 2025  
-**Version:** 1.0.0
+**Last Updated:** October 18, 2025  
+**Version:** 2.0.0 - General Feature Development Workflow
