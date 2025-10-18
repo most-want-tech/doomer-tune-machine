@@ -1,30 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { useKV } from '@github/spark/hooks'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
-import { DownloadSimple, FloppyDisk, Trash } from '@phosphor-icons/react'
+import { DownloadSimple } from '@phosphor-icons/react'
 import { useAudioProcessor, DEFAULT_EFFECTS, type AudioEffects } from '@/hooks/use-audio-processor'
 import { WaveformDisplay } from '@/components/waveform-display'
 import { AppHeader, AppFooter } from '@/components/layout'
 import { AudioUpload, PlaybackControls, VolumeControl, formatTime } from '@/features/audio-player'
 import { EffectsPanel } from '@/features/effects'
+import { usePresets, PresetControls } from '@/features/presets'
 import { toast, Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { exportVideo, type VideoExportProgress, type VideoExportStage } from '@/video/video-exporter'
 import { VIDEO_ORIENTATIONS, type VideoOrientation } from '@/video/video-layout'
 import { validateImageFile } from '@/video/image-utils'
-
-interface Preset {
-  name: string
-  effects: AudioEffects
-}
 
 const VIDEO_STAGE_LABELS: Record<VideoExportStage, string> = {
   initializing: 'Preparing export…',
@@ -47,11 +40,10 @@ function App() {
   const [isVideoExporting, setIsVideoExporting] = useState(false)
   const [videoExportProgress, setVideoExportProgress] = useState(0)
   const [videoExportStage, setVideoExportStage] = useState('')
-  const [presets, setPresets] = useKV<Preset[]>('doomer-presets', [])
-  const [newPresetName, setNewPresetName] = useState('')
-  const [isPresetDialogOpen, setIsPresetDialogOpen] = useState(false)
   
   const imageInputRef = useRef<HTMLInputElement>(null)
+  
+  const { presets, savePreset, loadPreset, deletePreset } = usePresets()
   
   const {
     loadAudioFile,
@@ -233,34 +225,13 @@ function App() {
     }
   }
 
-  const handleSavePreset = () => {
-    if (!newPresetName.trim()) {
-      toast.error('Please enter a preset name')
-      return
-    }
-
-    setPresets((current) => [
-      ...(current || []),
-      { name: newPresetName, effects: { ...effects } }
-    ])
-    
-    toast.success(`Preset "${newPresetName}" saved`)
-    setNewPresetName('')
-    setIsPresetDialogOpen(false)
-  }
-
   const handleLoadPreset = (presetName: string) => {
-    const preset = (presets || []).find(p => p.name === presetName)
+    loadPreset(presetName)
+    const preset = presets.find(p => p.name === presetName)
     if (preset) {
       setEffects(preset.effects)
       updateEffects(preset.effects)
-      toast.success(`Loaded preset "${presetName}"`)
     }
-  }
-
-  const handleDeletePreset = (presetName: string) => {
-    setPresets((current) => (current || []).filter(p => p.name !== presetName))
-    toast.success(`Deleted preset "${presetName}"`)
   }
 
   return (
@@ -302,69 +273,12 @@ function App() {
                 effects={effects}
                 onEffectChange={handleEffectChange}
                 presetControls={
-                  <div className="flex gap-2">
-                    {(presets || []).length > 0 && (
-                      <Select onValueChange={handleLoadPreset}>
-                        <SelectTrigger className="w-40">
-                          <SelectValue placeholder="Load preset" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(presets || []).map((preset) => (
-                            <SelectItem key={preset.name} value={preset.name}>
-                              {preset.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    
-                    <Dialog open={isPresetDialogOpen} onOpenChange={setIsPresetDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="secondary" size="sm">
-                          <FloppyDisk size={16} className="mr-2" />
-                          Save Preset
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Save Preset</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="preset-name">Preset Name</Label>
-                            <Input
-                              id="preset-name"
-                              value={newPresetName}
-                              onChange={(e) => setNewPresetName(e.target.value)}
-                              placeholder="My Doomer Mix"
-                            />
-                          </div>
-                          {(presets || []).length > 0 && (
-                            <div className="space-y-2">
-                              <Label>Existing Presets</Label>
-                              <div className="space-y-2">
-                                {(presets || []).map((preset) => (
-                                  <div key={preset.name} className="flex items-center justify-between p-2 rounded bg-muted">
-                                    <span className="text-sm">{preset.name}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeletePreset(preset.name)}
-                                    >
-                                      <Trash size={16} />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={handleSavePreset}>Save</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                  <PresetControls
+                    presets={presets}
+                    onLoad={handleLoadPreset}
+                    onSave={(name) => savePreset(name, effects)}
+                    onDelete={deletePreset}
+                  />
                 }
               />
 
