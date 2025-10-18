@@ -56,6 +56,16 @@ export const EFFECT_INFO: EffectInfoMap = {
     description: 'Simulates the pops and crackles of vinyl records for an authentic retro sound aesthetic.',
     type: 'switch'
   },
+  distortionAmount: {
+    name: 'Distortion',
+    description: 'Waveshaping saturation that adds harmonic grit. Higher values introduce more drive and compression.',
+    min: 0,
+    max: 100,
+    step: 1,
+    unit: '%',
+    format: (value) => `${value.toFixed(0)}%`,
+    type: 'slider'
+  },
   lowPassFreq: {
     name: 'Low Pass Filter',
     description: 'Cuts high frequencies above the set value. Lower settings create a muffled, distant, or underwater sound.',

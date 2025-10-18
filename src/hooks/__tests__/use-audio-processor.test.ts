@@ -24,6 +24,7 @@ type GraphMock = AudioGraph & {
   noiseBuffer: AudioBuffer
   vinylBuffer: AudioBuffer
   impulseBuffer: AudioBuffer
+  distortionCurve: Float32Array | null
 }
 
 let graphMock: GraphMock
@@ -132,6 +133,8 @@ const createGraphMock = (): GraphMock => {
     close: vi.fn(),
   }
 
+  let distortionCurve: Float32Array | null = null
+
   const nodes = {
     masterGain: createGainNodeStub(),
     delay: createDelayNodeStub(),
@@ -143,6 +146,16 @@ const createGraphMock = (): GraphMock => {
     convolver: createConvolverNodeStub(),
     reverbGain: createGainNodeStub(),
     dryGain: createGainNodeStub(),
+    distortion: {
+      connect: vi.fn(),
+      oversample: '4x' as WaveShaperNode['oversample'],
+      get curve() {
+        return distortionCurve
+      },
+      set curve(value: Float32Array | null) {
+        distortionCurve = value
+      },
+    },
     pitchShift: {
       pitch: 0,
       connect: vi.fn(),
@@ -167,6 +180,9 @@ const createGraphMock = (): GraphMock => {
     noiseBuffer,
     vinylBuffer,
     impulseBuffer,
+    get distortionCurve() {
+      return distortionCurve
+    },
   } as unknown as GraphMock
 }
 
@@ -289,6 +305,19 @@ describe('useAudioProcessor', () => {
     // With playback rate 1.5, advancing 0.25s real time = 0.375s audio time
     // Starting from 0.5s + 0.375s = 0.875s
     expect(result.current.currentTime).toBeCloseTo(0.875)
+  })
+
+  it('applies distortion curve when effects change', async () => {
+    const { result } = await loadTestAudio()
+
+    act(() => {
+      result.current.updateEffects({
+        ...DEFAULT_EFFECTS,
+        distortionAmount: 75,
+      })
+    })
+
+    expect(graphMock.distortionCurve).toBeInstanceOf(Float32Array)
   })
 
   it('exports audio through the offline renderer', async () => {

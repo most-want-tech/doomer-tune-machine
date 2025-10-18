@@ -26,9 +26,9 @@ export function EffectsPanel({ effects, onEffectChange, presetControls }: Effect
   }
 
   // Group effects by category for better organization
-  const delayEffects: EffectKey[] = ['delayTime', 'delayFeedback']
-  const reverbEffects: EffectKey[] = ['reverbMix', 'reverbDecay']
-  const noiseEffects: EffectKey[] = ['noiseLevel', 'vinylCrackle']
+  const ambienceEffects: EffectKey[] = ['delayTime', 'delayFeedback', 'reverbMix', 'reverbDecay']
+  const distortionEffects: EffectKey[] = ['distortionAmount']
+  const textureEffects: EffectKey[] = ['noiseLevel', 'vinylCrackle']
   const filterEffects: EffectKey[] = ['lowPassFreq', 'highPassFreq']
   const pitchEffects: EffectKey[] = ['pitchShift', 'playbackRate']
 
@@ -43,14 +43,14 @@ export function EffectsPanel({ effects, onEffectChange, presetControls }: Effect
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          {delayEffects.map(renderEffect)}
-          {reverbEffects.map(renderEffect)}
-          {noiseEffects.map(renderEffect)}
+          {ambienceEffects.map(renderEffect)}
+          {distortionEffects.map(renderEffect)}
         </div>
 
         <div className="space-y-4">
           {filterEffects.map(renderEffect)}
           {pitchEffects.map(renderEffect)}
+          {textureEffects.map(renderEffect)}
         </div>
       </div>
     </Card>

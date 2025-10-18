@@ -1,5 +1,42 @@
 const DEFAULT_NOISE_SECONDS = 2
 
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+const distortionCurveCache = new WeakMap<BaseAudioContext, Map<number, Float32Array>>()
+
+const generateDistortionCurve = (sampleRate: number, drive: number) => {
+  const sampleCount = Math.max(2048, Math.floor(sampleRate))
+  const curve = new Float32Array(sampleCount)
+  const intensity = 1 + drive * 24 // Higher drive increases saturation
+
+  for (let i = 0; i < sampleCount; i++) {
+    const x = (i * 2) / sampleCount - 1
+    const saturated = Math.tanh(intensity * x)
+    curve[i] = (1 - drive) * x + drive * saturated
+  }
+
+  return curve
+}
+
+export const getDistortionCurve = (context: BaseAudioContext, amount: number) => {
+  const normalizedAmount = clamp(Math.round(amount), 0, 100)
+  let cache = distortionCurveCache.get(context)
+  if (!cache) {
+    cache = new Map()
+    distortionCurveCache.set(context, cache)
+  }
+
+  const existing = cache.get(normalizedAmount)
+  if (existing) {
+    return existing
+  }
+
+  const drive = normalizedAmount / 100
+  const curve = generateDistortionCurve(context.sampleRate, drive)
+  cache.set(normalizedAmount, curve)
+  return curve
+}
+
 export const createReverbImpulse = (
   context: BaseAudioContext,
   duration: number,
