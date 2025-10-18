@@ -2,6 +2,24 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createAudioGraph } from '../audio-graph'
 
+// Mock Tone.js
+vi.mock('tone', () => {
+  return {
+    setContext: vi.fn(),
+    PitchShift: vi.fn().mockImplementation(() => {
+      return {
+        pitch: 0,
+        connect: vi.fn().mockReturnThis(),
+        input: {
+          connect: vi.fn().mockReturnThis(),
+        },
+        toDestination: vi.fn(),
+        dispose: vi.fn(),
+      }
+    }),
+  }
+})
+
 const setupGraph = () => {
   const graph = createAudioGraph()
   const { nodes } = graph
@@ -13,8 +31,12 @@ describe('audio-graph', () => {
   it('connects the graph once and avoids duplicate connections', () => {
     const { graph, nodes } = setupGraph()
 
+    // Mock the highPass connection to pitchShift.input to avoid validation issues
+    const highPassConnectSpy = vi.spyOn(nodes.highPass, 'connect').mockImplementation(() => nodes.highPass)
+    
     const connectSpies = [
-      vi.spyOn(nodes.highPass, 'connect'),
+      highPassConnectSpy,
+      vi.spyOn(nodes.pitchShift as any, 'connect'),
       vi.spyOn(nodes.lowPass, 'connect'),
       vi.spyOn(nodes.delay, 'connect'),
       vi.spyOn(nodes.feedback, 'connect'),
