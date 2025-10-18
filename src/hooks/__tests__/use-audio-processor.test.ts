@@ -275,8 +275,10 @@ describe('useAudioProcessor', () => {
     expect(mainSource.playbackRate.setValueAtTime).toHaveBeenCalled()
     // Playback rate should now be independent of pitch shift
     expect(mainSource.playbackRate.value).toBeCloseTo(1.5)
-    // Pitch shift should be applied to the pitchShift node
-    expect(graphMock.nodes.pitchShift.pitch).toBe(12)
+    // Pitch shift should be compensated for playback rate
+    // compensatedPitch = 12 - (12 * log2(1.5)) = 12 - 7.019... ≈ 4.98
+    const expectedPitch = 12 - 12 * Math.log2(1.5)
+    expect(graphMock.nodes.pitchShift.pitch).toBeCloseTo(expectedPitch, 2)
 
     ;(graphMock.context as unknown as { currentTime: number }).currentTime = 0.75
 
