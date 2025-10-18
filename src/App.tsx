@@ -5,19 +5,18 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
-import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
-import { DownloadSimple, FloppyDisk, Trash, Info } from '@phosphor-icons/react'
+import { DownloadSimple, FloppyDisk, Trash } from '@phosphor-icons/react'
 import { useAudioProcessor, DEFAULT_EFFECTS, type AudioEffects } from '@/hooks/use-audio-processor'
 import { WaveformDisplay } from '@/components/waveform-display'
 import { AppHeader, AppFooter } from '@/components/layout'
 import { AudioUpload, PlaybackControls, VolumeControl, formatTime } from '@/features/audio-player'
+import { EffectsPanel } from '@/features/effects'
 import { toast, Toaster } from 'sonner'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { exportVideo, type VideoExportProgress, type VideoExportStage } from '@/video/video-exporter'
 import { VIDEO_ORIENTATIONS, type VideoOrientation } from '@/video/video-layout'
 import { validateImageFile } from '@/video/image-utils'
@@ -25,49 +24,6 @@ import { validateImageFile } from '@/video/image-utils'
 interface Preset {
   name: string
   effects: AudioEffects
-}
-
-const EFFECT_INFO = {
-  delayTime: {
-    name: 'Delay Time',
-    description: 'Controls how long it takes for the delayed signal to repeat. Longer times create more spaced-out echoes.'
-  },
-  delayFeedback: {
-    name: 'Delay Feedback',
-    description: 'Determines how many times the delay repeats. Higher values create more echoes that fade gradually.'
-  },
-  reverbMix: {
-    name: 'Reverb Mix',
-    description: 'Blends the reverb effect with the dry signal. Higher values create a more spacious, ambient sound.'
-  },
-  reverbDecay: {
-    name: 'Reverb Decay',
-    description: 'Controls how long the reverb tail lasts. Longer decay simulates larger spaces like halls or cathedrals.'
-  },
-  noiseLevel: {
-    name: 'Noise Level',
-    description: 'Adds analog-style background noise for a vintage tape or cassette feel. Subtle amounts add warmth.'
-  },
-  vinylCrackle: {
-    name: 'Vinyl Crackle',
-    description: 'Simulates the pops and crackles of vinyl records for an authentic retro sound aesthetic.'
-  },
-  lowPassFreq: {
-    name: 'Low Pass Filter',
-    description: 'Cuts high frequencies above the set value. Lower settings create a muffled, distant, or underwater sound.'
-  },
-  highPassFreq: {
-    name: 'High Pass Filter',
-    description: 'Cuts low frequencies below the set value. Higher settings thin out the sound and remove bass rumble.'
-  },
-  pitchShift: {
-    name: 'Pitch Shift',
-    description: 'Changes the pitch without affecting speed. Negative values create darker tones, positive values brighten.'
-  },
-  playbackRate: {
-    name: 'Playback Speed',
-    description: 'Changes both pitch and speed together. Lower values create a slowed-down, dreamy effect.'
-  }
 }
 
 const VIDEO_STAGE_LABELS: Record<VideoExportStage, string> = {
@@ -342,10 +298,10 @@ function App() {
                 </div>
               </Card>
 
-              <Card className="p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Effects</h2>
-                  
+              <EffectsPanel
+                effects={effects}
+                onEffectChange={handleEffectChange}
+                presetControls={
                   <div className="flex gap-2">
                     {(presets || []).length > 0 && (
                       <Select onValueChange={handleLoadPreset}>
@@ -409,265 +365,8 @@ function App() {
                       </DialogContent>
                     </Dialog>
                   </div>
-                </div>
-
-                <Separator />
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Delay Time</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.delayTime.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {effects.delayTime.toFixed(2)}s
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.delayTime]}
-                        onValueChange={(v) => handleEffectChange('delayTime', v[0])}
-                        max={2}
-                        step={0.01}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Delay Feedback</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.delayFeedback.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {(effects.delayFeedback * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.delayFeedback]}
-                        onValueChange={(v) => handleEffectChange('delayFeedback', v[0])}
-                        max={0.9}
-                        step={0.01}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Reverb Mix</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.reverbMix.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {(effects.reverbMix * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.reverbMix]}
-                        onValueChange={(v) => handleEffectChange('reverbMix', v[0])}
-                        max={1}
-                        step={0.01}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Reverb Decay</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.reverbDecay.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {effects.reverbDecay.toFixed(1)}s
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.reverbDecay]}
-                        onValueChange={(v) => handleEffectChange('reverbDecay', v[0])}
-                        min={0.5}
-                        max={5}
-                        step={0.1}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Noise Level</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.noiseLevel.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {(effects.noiseLevel * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.noiseLevel]}
-                        onValueChange={(v) => handleEffectChange('noiseLevel', v[0])}
-                        max={0.3}
-                        step={0.01}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="vinyl-crackle">Vinyl Crackle</Label>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info size={16} className="text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p>{EFFECT_INFO.vinylCrackle.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <Switch
-                        id="vinyl-crackle"
-                        checked={effects.vinylCrackle}
-                        onCheckedChange={(checked) => handleEffectChange('vinylCrackle', checked)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Low Pass Filter</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.lowPassFreq.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {effects.lowPassFreq.toFixed(0)} Hz
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.lowPassFreq]}
-                        onValueChange={(v) => handleEffectChange('lowPassFreq', v[0])}
-                        min={200}
-                        max={22000}
-                        step={100}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>High Pass Filter</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.highPassFreq.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {effects.highPassFreq.toFixed(0)} Hz
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.highPassFreq]}
-                        onValueChange={(v) => handleEffectChange('highPassFreq', v[0])}
-                        min={20}
-                        max={1000}
-                        step={10}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Pitch Shift</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.pitchShift.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {effects.pitchShift > 0 ? '+' : ''}{effects.pitchShift} semitones
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.pitchShift]}
-                        onValueChange={(v) => handleEffectChange('pitchShift', v[0])}
-                        min={-12}
-                        max={12}
-                        step={1}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Label>Playback Speed</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={16} className="text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>{EFFECT_INFO.playbackRate.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {effects.playbackRate.toFixed(2)}x
-                        </span>
-                      </div>
-                      <Slider
-                        value={[effects.playbackRate]}
-                        onValueChange={(v) => handleEffectChange('playbackRate', v[0])}
-                        min={0.5}
-                        max={2}
-                        step={0.01}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                }
+              />
 
               <Card className="p-6 space-y-6">
                 <h2 className="text-xl font-semibold">Export</h2>
