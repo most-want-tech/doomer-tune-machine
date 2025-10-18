@@ -49,6 +49,10 @@ export const createAudioGraph = (): AudioGraph => {
 
   // Create Tone.js PitchShift node
   const pitchShift = new Tone.PitchShift()
+  
+  // Create gain nodes as input/output for pitch shift integration
+  const pitchShiftInput = context.createGain()
+  const pitchShiftOutput = context.createGain()
 
   lowPass.type = 'lowpass'
   highPass.type = 'highpass'
@@ -60,6 +64,8 @@ export const createAudioGraph = (): AudioGraph => {
   reverbGain.gain.value = 0
   dryGain.gain.value = 1
   pitchShift.pitch = 0
+  pitchShiftInput.gain.value = 1
+  pitchShiftOutput.gain.value = 1
 
   let connected = false
 
@@ -70,9 +76,13 @@ export const createAudioGraph = (): AudioGraph => {
   const ensureConnections = () => {
     if (connected) return
 
-    // Connect pitch shift to filters (pitch shift goes first in chain)
-    highPass.connect(pitchShift.input as any)
-    pitchShift.connect(lowPass)
+    // Connect pitch shift - Tone.js integration pattern:
+    // Native Web Audio node → Tone.js input (via _gainNode)
+    // Tone.js node → Native Web Audio node (via .connect())
+    highPass.connect(pitchShiftInput)
+    pitchShiftInput.connect((pitchShift as any).input._gainNode)
+    pitchShift.connect(pitchShiftOutput as any)
+    pitchShiftOutput.connect(lowPass)
     
     lowPass.connect(delay)
     delay.connect(feedback)
