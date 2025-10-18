@@ -2,6 +2,7 @@ import { type MutableRefObject, useEffect, useRef, useState } from 'react'
 
 import { DEFAULT_EFFECTS } from '@/audio/audio-effects'
 import type { AudioEffects } from '@/audio/audio-effects'
+import { getDistortionCurve } from '@/audio/audio-utils'
 import { type AudioGraph, createAudioGraph } from '@/audio/audio-graph'
 import { renderOfflineAudio } from '@/audio/offline-renderer'
 
@@ -73,6 +74,11 @@ export function useAudioProcessor() {
     nodes.vinylGain.gain.setValueAtTime(effects.vinylCrackle ? VINYL_GAIN : 0, now)
     nodes.reverbGain.gain.setValueAtTime(effects.reverbMix, now)
     nodes.dryGain.gain.setValueAtTime(1 - effects.reverbMix, now)
+
+    const distortionCurve = getDistortionCurve(context, effects.distortionAmount)
+    if (nodes.distortion.curve !== distortionCurve) {
+      nodes.distortion.curve = distortionCurve as Float32Array<ArrayBuffer>
+    }
 
     // Apply pitch shift
     // To keep pitch independent of playback rate, we need to compensate:

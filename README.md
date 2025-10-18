@@ -7,7 +7,7 @@ A real-time audio processing web application that transforms uploaded songs into
 
 ## ✨ Features
 
-- **Real-time Audio Processing**: Apply multiple effects (reverb, distortion, lowpass filter, bitcrusher, etc.) in real-time
+- **Real-time Audio Processing**: Apply multiple effects (reverb, distortion, lowpass filter, noise overlays, etc.) in real-time
 - **Waveform Visualization**: Interactive canvas-based waveform display with playback progress
 - **Preset Management**: Save and load effect configurations with persistent storage
 - **Audio Export**: Export processed audio as WAV files
@@ -77,16 +77,6 @@ To match the lo-fi doomer aesthetic, video exports intentionally target extremel
 
 These defaults keep files lightweight and give every export the desired degraded vibe without additional configuration.
 
-🧹 Just Exploring?
-No problem! If you were just checking things out and don’t need to keep this code:
-
-- Simply delete your Spark.
-- Everything will be cleaned up — no traces left behind.
-
-📄 License For Spark Template Resources 
-
-The Spark Template files and resources from GitHub are licensed under the terms of the MIT license, Copyright GitHub, Inc.
-
 ## 🧪 Testing
 
 ```bash
@@ -112,7 +102,7 @@ Tests are automatically run via GitHub Actions on pull requests and pushes to `d
 - **Styling**: Tailwind CSS
 - **Audio Processing**: Web Audio API + Tone.js (for advanced pitch shifting)
 - **Video Export**: WebCodecs API
-- **State Management**: React hooks + @github/spark KV storage
+- **State Management**: React hooks with localStorage-backed presets
 - **Testing**: Vitest
 - **Icons**: Phosphor Icons
 
@@ -125,15 +115,9 @@ Tests are automatically run via GitHub Actions on pull requests and pushes to `d
 - **Highpass Filter**: Remove low frequencies and bass rumble
 - **Vinyl Crackle**: Simulated vinyl noise and pops
 - **Noise Level**: Analog-style background noise for vintage tape feel
+- **Distortion**: Waveshaping saturation with drive control for added grit
 - **Pitch Shift**: Independent pitch control (-12 to +12 semitones) *powered by Tone.js*
 - **Playback Speed**: Independent tempo control (0.25x to 2x) without affecting pitch
-
-### Coming Soon 🚧
-- **Distortion**: Waveshaping distortion for grit and saturation
-- **Bitcrusher**: Sample rate and bit depth reduction for digital degradation
-- **Chorus**: Modulated delay effect for depth
-- **Tape Warble**: Pitch modulation simulating tape speed variations
-- **Auto-pan**: Stereo panning automation
 
 ## 🎬 Video Export
 
@@ -191,7 +175,7 @@ See `.github/copilot-instructions.md` for complete development guidelines.
 
 ## 🧑‍💻 Contributing
 
-This is a Spark template project. For contribution guidelines, see the feature-based architecture documentation in `.github/copilot-instructions.md`.
+Please follow the feature-based architecture guidelines documented in `.github/copilot-instructions.md` when proposing changes. Keep features isolated, write tests for new behavior, and document noteworthy updates in the PR description.
 
 ## 🎬 About
 
@@ -207,4 +191,4 @@ If you enjoy the vibe this tool creates, check out the channel for curated mixes
 
 ## 📄 License
 
-The Spark Template files and resources from GitHub are licensed under the terms of the MIT license, Copyright GitHub, Inc.
+This project is licensed under the terms of the MIT license. See [`LICENSE`](LICENSE) for details.

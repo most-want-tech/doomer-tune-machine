@@ -13,6 +13,7 @@ export interface AudioGraphNodes {
   convolver: ConvolverNode
   reverbGain: GainNode
   dryGain: GainNode
+  distortion: WaveShaperNode
   pitchShift: Tone.PitchShift
 }
 
@@ -46,6 +47,7 @@ export const createAudioGraph = (): AudioGraph => {
   const convolver = context.createConvolver()
   const reverbGain = context.createGain()
   const dryGain = context.createGain()
+  const distortion = context.createWaveShaper()
 
   // Create Tone.js PitchShift node
   const pitchShift = new Tone.PitchShift()
@@ -66,6 +68,7 @@ export const createAudioGraph = (): AudioGraph => {
   pitchShift.pitch = 0
   pitchShiftInput.gain.value = 1
   pitchShiftOutput.gain.value = 1
+  distortion.oversample = '4x'
 
   let connected = false
 
@@ -79,7 +82,8 @@ export const createAudioGraph = (): AudioGraph => {
     // Connect pitch shift - Tone.js integration pattern:
     // Native Web Audio node → Tone.js input (via _gainNode)
     // Tone.js node → Native Web Audio node (via .connect())
-    highPass.connect(pitchShiftInput)
+    highPass.connect(distortion)
+    distortion.connect(pitchShiftInput)
     try {
       // Connect to Tone.js input's underlying GainNode
       pitchShiftInput.connect((pitchShift as any).input._gainNode)
@@ -143,9 +147,8 @@ export const createAudioGraph = (): AudioGraph => {
     noiseBuffer = null
     vinylBuffer = null
     
-    // Dispose Tone.js node
+    // Dispose Tone.js node and custom processors
     pitchShift.dispose()
-    
     // close may reject if already closed; ignore errors intentionally
     try {
       await context.close()
@@ -167,6 +170,7 @@ export const createAudioGraph = (): AudioGraph => {
       convolver,
       reverbGain,
       dryGain,
+      distortion,
       pitchShift,
     },
     ensureConnections,

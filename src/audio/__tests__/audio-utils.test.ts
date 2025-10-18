@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer } from '../audio-utils'
+import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer, getDistortionCurve } from '../audio-utils'
 
 const SAMPLE_RATE = 48_000
 
@@ -44,4 +44,21 @@ describe('audio-utils', () => {
       expect(Math.abs(channel[channel.length - 1])).toBeLessThanOrEqual(1e-6)
     }
   })
+
+  it('reuses cached distortion curves per amount and maintains identity at zero drive', () => {
+    const context = makeContext()
+
+    const curveA = getDistortionCurve(context, 0)
+    const curveB = getDistortionCurve(context, 0)
+    expect(curveA).toBe(curveB)
+
+    const midpoint = curveA[Math.floor(curveA.length / 2)]
+    expect(midpoint).toBeCloseTo(0, 5)
+
+    const curveHigh = getDistortionCurve(context, 80)
+    expect(curveHigh).not.toBe(curveA)
+    const maxMagnitude = curveHigh.reduce((acc, value) => Math.max(acc, Math.abs(value)), 0)
+    expect(maxMagnitude).toBeLessThanOrEqual(1)
+  })
+
 })

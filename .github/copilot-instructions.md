@@ -17,7 +17,7 @@ AudioBuffer → Source → Filters → Effects → Gain → Destination
 ### State Management
 - **Audio state**: Managed entirely in `use-audio-processor` hook - never duplicate audio context references
 - **UI state**: Local React state in `App.tsx` for effects parameters and playback controls  
-- **Persistence**: Uses `@github/spark/hooks` `useKV()` for preset storage (not localStorage)
+- **Persistence**: Presets stored through a custom localStorage-backed hook (safe for SSR)
 - **Effects interface**: `AudioEffects` type defines all effect parameters with sensible defaults in `DEFAULT_EFFECTS`
 
 ### Component Architecture
@@ -75,13 +75,9 @@ When adding new audio effects:
 3. Add parameter handling in effects update logic
 4. Connect nodes in the audio processing chain appropriately
 5. Add UI controls in effects feature with effect metadata in `src/features/effects/constants/effect-info.ts`
+6. Reuse shared helpers where possible (e.g., `getDistortionCurve` for waveshaping curves)
 
 ## Key Dependencies & Integration
-
-### GitHub Spark
-- Uses `@github/spark` framework for enhanced React development
-- Spark plugins in `vite.config.ts` handle icon imports and optimizations
-- Import icons from `@phosphor-icons/react` (not Lucide despite shadcn config)
 
 ### UI System  
 - Shadcn/ui components in "new-york" style with custom neutral color palette
@@ -104,7 +100,7 @@ When adding new audio effects:
 ### Import Order
 ```tsx
 // 1. React imports
-// 2. External libraries (@github/spark, @radix-ui, etc)  
+// 2. External libraries (@radix-ui, tone, etc)
 // 3. Internal components (@/components/ui, @/hooks)
 // 4. Types and utilities
 // 5. Styles (if any)

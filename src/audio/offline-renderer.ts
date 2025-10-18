@@ -1,6 +1,6 @@
 import * as Tone from 'tone'
 import type { AudioEffects } from './audio-effects'
-import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer } from './audio-utils'
+import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer, getDistortionCurve } from './audio-utils'
 import { audioBufferToWav } from './wav-encoder'
 
 const VINYL_GAIN = 0.15
@@ -72,6 +72,7 @@ const configureGraph = (
   const convolver = offlineContext.createConvolver()
   const reverbGain = offlineContext.createGain()
   const dryGain = offlineContext.createGain()
+  const distortion = offlineContext.createWaveShaper()
 
   // Create Tone.js context and PitchShift for offline rendering
   Tone.setContext(offlineContext as any)
@@ -79,6 +80,7 @@ const configureGraph = (
 
   lowPass.type = 'lowpass'
   highPass.type = 'highpass'
+  distortion.oversample = '4x'
 
   delay.delayTime.value = effects.delayTime
   feedback.gain.value = effects.delayFeedback
@@ -88,10 +90,12 @@ const configureGraph = (
   vinylGain.gain.value = effects.vinylCrackle ? VINYL_GAIN : 0
   reverbGain.gain.value = effects.reverbMix
   dryGain.gain.value = 1 - effects.reverbMix
+  distortion.curve = getDistortionCurve(offlineContext, effects.distortionAmount) as Float32Array<ArrayBuffer>
 
   // Connect audio chain with pitch shift
   source.connect(highPass)
-  highPass.connect(pitchShift.input as any)
+  highPass.connect(distortion)
+  distortion.connect(pitchShift.input as any)
   pitchShift.connect(lowPass as any)
   lowPass.connect(delay)
   delay.connect(feedback)
