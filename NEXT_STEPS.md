@@ -8,11 +8,13 @@
    - Best practices from Bulletproof React and React Design Patterns
    - Success metrics and migration strategy
 
-2. **✅ Reusable Workflow Guide Created**
+2. **✅ General Development Workflow Created**
    - File: `.github/REFACTORING_WORKFLOW.md`
-   - Complete workflow for future refactoring tasks
-   - Commit conventions, testing strategy, rollback procedures
-   - Can be used for all future major refactors
+   - Complete workflow for ALL development: features, bugs, refactors, docs
+   - Covers entire GitHub flow: Issue → Branch → Code → PR → Merge
+   - Tool-agnostic (works with any Git client)
+   - Quick reference: `.github/WORKFLOW_SUMMARY.md`
+   - Can be used for all future work, not just refactors
 
 3. **✅ Branch Created and Pushed**
    - Branch name: `refactor/app-component-architecture`
@@ -27,20 +29,9 @@
 
 ## 📋 What You Need to Do
 
-### Step 1: Authenticate with GitKraken (Required for automation)
+### Step 1: Create the GitHub Issue
 
-To enable automated GitHub issue creation in the future, click this link:
-
-**[Click Here to Sign In to GitKraken](vscode://eamodio.gitlens/link/integrations/connect?id=github&source=mcp)**
-
-Or run in terminal:
-```bash
-gk auth login
-```
-
-### Step 2: Create the GitHub Issue Manually
-
-Since we need authentication first, please create the issue manually:
+Create the issue on GitHub to track this work:
 
 1. **Go to GitHub Issues:**
    - Navigate to: https://github.com/most-want-tech/doomer-tune-machine/issues
@@ -65,7 +56,7 @@ Since we need authentication first, please create the issue manually:
    - Assignee: Yourself (@hstrejoluna or your username)
    - Project: `doomermixerplus` (if you have a project board)
 
-### Step 3: Link Branch to Issue
+### Step 2: Link Branch to Issue
 
 After creating the issue, you can link it:
 
@@ -127,12 +118,21 @@ After creating the issue, you can link it:
 - Checking off completed tasks
 
 ### 2. .github/REFACTORING_WORKFLOW.md
-**What:** Reusable workflow guide
+**What:** Complete feature development workflow
 **Use for:**
-- Step-by-step process for each phase
-- Commit message templates
-- Testing checklist
-- **SAVE THIS for future refactors!**
+- All development work (features, bugs, refactors, docs)
+- Step-by-step GitHub flow process
+- Commit message conventions
+- Testing and review checklists
+- Troubleshooting common issues
+- **SAVE THIS for all future work!**
+
+### 2b. .github/WORKFLOW_SUMMARY.md
+**What:** Quick reference guide
+**Use for:**
+- Fast lookup when you need the basics
+- Quick command reference
+- Essential steps without details
 
 ### 3. .github/ISSUE_TEMPLATE.md
 **What:** GitHub issue content
