@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress'
 import { CloudArrowUp, Play, Pause, Stop, DownloadSimple, FloppyDisk, Trash, Info } from '@phosphor-icons/react'
 import { useAudioProcessor, DEFAULT_EFFECTS, type AudioEffects } from '@/hooks/use-audio-processor'
 import { WaveformDisplay } from '@/components/waveform-display'
+import { AppHeader, AppFooter } from '@/components/layout'
 import { toast, Toaster } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { exportVideo, type VideoExportProgress, type VideoExportStage } from '@/video/video-exporter'
@@ -356,10 +357,7 @@ function App() {
       <Toaster position="top-center" theme="dark" />
       <TooltipProvider>
         <div className="max-w-6xl mx-auto space-y-6">
-          <header className="text-center space-y-2">
-            <h1 className="text-4xl font-bold text-primary tracking-tight">Doomer Mix Maker</h1>
-            <p className="text-muted-foreground">Transform your tracks into melancholic masterpieces</p>
-          </header>
+          <AppHeader />
 
           <Card className="p-6">
             <div
@@ -874,20 +872,7 @@ function App() {
         </div>
       </TooltipProvider>
       
-      {/* Footer */}
-      <footer className="mt-8 py-4 text-center text-sm text-muted-foreground border-t">
-        <p>
-          Made with 🩷 by HS Trejo Luna, Frontend Developer at{' '}
-          <a 
-            href="https://mostwant.tech" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:text-foreground transition-colors underline underline-offset-4"
-          >
-           ⚡️ Most Want Tech ⚡️
-          </a>
-        </p>
-      </footer>
+      <AppFooter />
     </div>
   )
 }
