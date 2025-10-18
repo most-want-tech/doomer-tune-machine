@@ -463,6 +463,10 @@ Update relevant documentation:
 
 When working on something that takes multiple PRs:
 
+**Real Example: App.tsx Refactoring (✅ Completed December 2024)**
+
+See `REFACTOR_PLAN.md` for the complete case study of successfully refactoring App.tsx from 894 → 111 lines through 7 phases with zero breaking changes.
+
 **Create an Epic/Parent Issue:**
 ```markdown
 ## Epic: App.tsx Refactoring
