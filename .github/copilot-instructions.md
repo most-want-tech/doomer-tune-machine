@@ -21,10 +21,37 @@ AudioBuffer → Source → Filters → Effects → Gain → Destination
 - **Effects interface**: `AudioEffects` type defines all effect parameters with sensible defaults in `DEFAULT_EFFECTS`
 
 ### Component Architecture
-- `App.tsx`: Main component containing all UI and audio coordination logic
-- `WaveformDisplay`: Canvas-based visualization that renders audio buffer waveform
+- `App.tsx`: Lightweight orchestrator component (111 lines) that coordinates feature modules
+  - **Refactored**: Successfully migrated from 894 lines monolith to feature-based architecture
+  - Handles only high-level state coordination and feature composition
+  - All domain logic extracted into feature modules
+- `src/components/layout/`: Shared layout components (AppHeader, AppFooter)
 - `src/components/ui/`: Shadcn/ui components using Radix primitives - follow existing patterns
-- Effect controls use controlled inputs bound to effects state with immediate audio updates
+- `WaveformDisplay`: Canvas-based visualization component in shared components
+
+### Feature-Based Architecture (Completed ✅)
+Following Bulletproof React patterns, the codebase uses feature modules:
+
+**Structure Pattern**: `src/features/<feature-name>/`
+- `components/` - Feature-specific UI components
+- `hooks/` - Feature-specific custom hooks
+- `types.ts` - Feature-specific TypeScript types
+- `constants/` - Feature-specific configuration/data
+- `index.ts` - Barrel export for public API
+
+**Existing Features**:
+- `audio-player/` - File upload and audio loading
+- `playback/` - Playback controls, waveform display, volume control
+- `effects/` - Audio effects panel with sliders/switches and metadata
+- `presets/` - Save/load/delete preset management
+- `export/` - Audio and video export functionality
+
+**Shared Modules**: `src/components/`, `src/hooks/`, `src/lib/`, `src/audio/`, `src/video/`
+
+**Import Rules**: 
+- Features can import from shared modules
+- Features CANNOT import from other features (keep isolated)
+- App.tsx imports from features via barrel exports
 
 ## Development Workflows
 
@@ -43,11 +70,11 @@ npm run kill         # Kill process on port 5000 if needed
 
 ### Effect Implementation Pattern
 When adding new audio effects:
-1. Add parameter to `AudioEffects` interface with default value
-2. Create/configure audio nodes in `initAudioContext()`
-3. Add parameter handling in `updateEffects()` switch statement
-4. Connect nodes in the audio chain appropriately
-5. Add UI controls in `App.tsx` with effect info in `EFFECT_INFO`
+1. Add parameter to `AudioEffects` interface in `src/audio/audio-effects.ts` with default value in `DEFAULT_EFFECTS`
+2. Create/configure audio nodes in audio graph initialization (`src/audio/audio-graph.ts`)
+3. Add parameter handling in effects update logic
+4. Connect nodes in the audio processing chain appropriately
+5. Add UI controls in effects feature with effect metadata in `src/features/effects/constants/effect-info.ts`
 
 ## Key Dependencies & Integration
 
@@ -66,6 +93,8 @@ When adding new audio effects:
 - **NO external audio libraries** - uses native Web Audio API exclusively
 - Canvas-based waveform rendering without external visualization libs
 - Export uses `OfflineAudioContext` for non-realtime high-quality rendering
+- Audio processing utilities in `src/audio/` (audio-effects, audio-graph, audio-utils, offline-renderer, wav-encoder)
+- Video export utilities in `src/video/` (codec-support, image-utils, video-exporter, video-layout)
 
 ## File Organization Conventions
 
@@ -85,7 +114,38 @@ When adding new audio effects:
 - Use refs for audio nodes, state for UI-relevant values only
 
 ### Component Patterns
+- Feature modules encapsulate related UI and logic
 - Effect controls follow pattern: Label + Slider/Switch + Info tooltip
 - All audio parameters immediately update via `updateEffects(effects)`
 - Loading states and error handling use sonner toast notifications
-- File uploads handled with hidden input + drag/drop on designated areas
+- File uploads handled with hidden input + drag/drop in audio-player feature
+
+## Refactoring Standards
+
+### When Creating New Features
+Follow the feature-based architecture pattern:
+
+1. **Create feature folder**: `src/features/<feature-name>/`
+2. **Organize by type**:
+   - Components in `components/` subdirectory
+   - Hooks in `hooks/` subdirectory  
+   - Types in `types.ts`
+   - Constants in `constants/` subdirectory
+3. **Use barrel exports**: Create `index.ts` to export public API
+4. **Keep features isolated**: No cross-feature imports
+
+### Major Refactoring Workflow
+For large-scale refactors (>500 LOC changes):
+
+1. **Create detailed plan**: Use `REFACTOR_PLAN.md` as template
+2. **Follow workflow**: See `.github/REFACTORING_WORKFLOW.md`
+3. **Break into phases**: Each phase = separate PR
+4. **Use feature branches**: `refactor/<scope>-<description>`
+5. **Document everything**: Plan, phases, decisions, metrics
+
+**Previous major refactor**: App.tsx component architecture (✅ Completed December 2024)
+- Reduced App.tsx from 894 → 111 lines (87.6% reduction)
+- Created 5 feature modules (audio-player, playback, effects, presets, export)
+- Extracted 20+ reusable components
+- Zero breaking changes during 7-phase migration
+- See `REFACTOR_PLAN.md` for detailed documentation
