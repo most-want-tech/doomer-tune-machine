@@ -1,6 +1,6 @@
 import { type MutableRefObject, useEffect, useRef, useState } from 'react'
 
-import { DEFAULT_EFFECTS } from '@/audio/audio-effects'
+import { DEFAULT_EFFECTS, getCompensatedPitch } from '@/audio/audio-effects'
 import type { AudioEffects } from '@/audio/audio-effects'
 import { getDistortionCurve } from '@/audio/audio-utils'
 import { type AudioGraph, createAudioGraph } from '@/audio/audio-graph'
@@ -8,9 +8,11 @@ import { renderOfflineAudio } from '@/audio/offline-renderer'
 
 const VINYL_GAIN = 0.15
 
+const MIN_PLAYBACK_RATE = 0.01
+
 const calculatePlaybackRate = (effects: AudioEffects) => {
   // Playback rate now ONLY controls speed, not pitch
-  return effects.playbackRate
+  return Math.max(MIN_PLAYBACK_RATE, effects.playbackRate)
 }
 
 const stopLoopSource = (ref: MutableRefObject<AudioBufferSourceNode | null>) => {
@@ -84,16 +86,14 @@ export function useAudioProcessor() {
     // To keep pitch independent of playback rate, we need to compensate:
     // When playback rate changes, pitch changes by 12 * log2(rate) semitones
     // So we apply the inverse: userPitch - (12 * log2(playbackRate))
-    const playbackRatePitchShift = 12 * Math.log2(effects.playbackRate)
-    const compensatedPitch = effects.pitchShift - playbackRatePitchShift
-    nodes.pitchShift.pitch = compensatedPitch
+    const nextPlaybackRate = calculatePlaybackRate(effects)
+    nodes.pitchShift.pitch = getCompensatedPitch({ ...effects, playbackRate: nextPlaybackRate })
 
     const impulse = graph.getReverbImpulse(effects.reverbDecay, effects.reverbDecay)
     if (nodes.convolver.buffer !== impulse) {
       nodes.convolver.buffer = impulse
     }
 
-    const nextPlaybackRate = calculatePlaybackRate(effects)
     if (sourceNodeRef.current) {
       const progress = getPlaybackPosition()
       playbackRateRef.current = nextPlaybackRate

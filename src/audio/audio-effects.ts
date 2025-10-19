@@ -25,3 +25,14 @@ export const DEFAULT_EFFECTS: AudioEffects = {
   reverbMix: 0,
   reverbDecay: 2,
 }
+
+const MIN_RATE_FOR_COMPENSATION = 0.01
+
+/**
+ * Mirrors runtime pitch compensation logic so playback rate changes do not double-apply pitch shifts.
+ */
+export const getCompensatedPitch = (effects: AudioEffects): number => {
+  const safeRate = Math.max(MIN_RATE_FOR_COMPENSATION, effects.playbackRate)
+  const playbackRatePitchShift = 12 * Math.log2(safeRate)
+  return effects.pitchShift - playbackRatePitchShift
+}

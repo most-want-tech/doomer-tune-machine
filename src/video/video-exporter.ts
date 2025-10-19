@@ -9,8 +9,8 @@ import { getImageDimensions, loadImageFromFile, releaseImage } from './image-uti
 import { calculateContainRect, getVideoDimensions, type VideoOrientation } from './video-layout'
 
 const DEFAULT_FRAME_RATE = 12
-const AUDIO_SAMPLE_RATE = 22_050
-const AUDIO_BITRATE = 64_000
+const MAX_AUDIO_SAMPLE_RATE = 48_000
+const AUDIO_BITRATE = 128_000
 const VIDEO_BITRATE = 320_000
 const AUDIO_CHUNK_SECONDS = 4
 const PROGRESS_AUDIO_WEIGHT = 0.45
@@ -103,8 +103,13 @@ export const exportVideo = async ({
     detail: 'Rendering audio effects',
   })
 
+  const sourceSampleRate = Number.isFinite(audioBuffer.sampleRate) && audioBuffer.sampleRate > 0
+    ? audioBuffer.sampleRate
+    : MAX_AUDIO_SAMPLE_RATE
+  const targetSampleRate = Math.min(MAX_AUDIO_SAMPLE_RATE, sourceSampleRate)
+
   const renderedBuffer = await renderOfflineAudioBuffer(audioBuffer, effects, {
-    sampleRate: AUDIO_SAMPLE_RATE,
+    sampleRate: targetSampleRate,
   })
 
   const durationSeconds = renderedBuffer.length / renderedBuffer.sampleRate
@@ -136,7 +141,7 @@ export const exportVideo = async ({
       stage,
       detail,
       framesEncoded,
-  totalFrames: videoSegmentCount,
+        totalFrames: videoSegmentCount,
     })
   }
 
@@ -150,7 +155,7 @@ export const exportVideo = async ({
   updateProgress('initializing', 'Detecting codec support')
 
   const audioCodec = await getBestSupportedAudioCodec(
-    AUDIO_SAMPLE_RATE,
+    renderedBuffer.sampleRate,
     renderedBuffer.numberOfChannels,
     AUDIO_BITRATE,
   )
@@ -264,8 +269,8 @@ export const exportVideo = async ({
       percent: 1,
       stage: 'finalizing',
       detail: 'Video export complete',
-  framesEncoded: videoSegmentCount,
-  totalFrames: videoSegmentCount,
+      framesEncoded: videoSegmentCount,
+      totalFrames: videoSegmentCount,
     })
 
     return {

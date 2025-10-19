@@ -27,8 +27,10 @@ const mockAudioBuffer = (length: number, sampleRate: number, channels: number) =
 
 const fakeImage = { width: 800, height: 600 }
 
+const renderOfflineAudioBufferMock = vi.fn()
+
 vi.mock('@/audio/offline-renderer', () => ({
-  renderOfflineAudioBuffer: vi.fn().mockResolvedValue(mockAudioBuffer(48_000, 48_000, 2)),
+  renderOfflineAudioBuffer: renderOfflineAudioBufferMock,
 }))
 
 const releaseImageMock = vi.fn()
@@ -44,9 +46,12 @@ vi.mock('../image-utils', () => ({
   validateImageFile: vi.fn(),
 }))
 
+const getBestSupportedAudioCodecMock = vi.fn().mockResolvedValue({ codec: 'aac', name: 'AAC-LC' })
+const getBestSupportedVideoCodecMock = vi.fn().mockResolvedValue({ codec: 'avc', name: 'H.264 Baseline' })
+
 vi.mock('../codec-support', () => ({
-  getBestSupportedAudioCodec: vi.fn().mockResolvedValue({ codec: 'aac', name: 'AAC-LC' }),
-  getBestSupportedVideoCodec: vi.fn().mockResolvedValue({ codec: 'avc', name: 'H.264 Baseline' }),
+  getBestSupportedAudioCodec: getBestSupportedAudioCodecMock,
+  getBestSupportedVideoCodec: getBestSupportedVideoCodecMock,
   isAudioCodecSupported: vi.fn(),
   isVideoCodecSupported: vi.fn(),
 }))
@@ -154,7 +159,18 @@ beforeEach(() => {
   vi.resetModules()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  renderOfflineAudioBufferMock.mockReset()
+  getBestSupportedAudioCodecMock.mockClear()
+  getBestSupportedVideoCodecMock.mockClear()
   vi.stubGlobal('AudioBuffer', StubAudioBuffer as unknown as typeof AudioBuffer)
+  renderOfflineAudioBufferMock.mockImplementation((
+    _buffer: AudioBuffer,
+    _effects: unknown,
+    options?: { sampleRate?: number },
+  ) => {
+    const sampleRate = options?.sampleRate ?? 48_000
+    return Promise.resolve(mockAudioBuffer(48_000, sampleRate, 2))
+  })
 })
 
 describe('exportVideo', () => {
@@ -164,9 +180,11 @@ describe('exportVideo', () => {
 
     const { exportVideo } = await import('../video-exporter')
 
+    const inputBuffer = mockAudioBuffer(48_000, 44_100, 2)
+
     await expect(
       exportVideo({
-        audioBuffer: {} as AudioBuffer,
+        audioBuffer: inputBuffer,
         effects: {} as any,
         imageFile: new File(['data'], 'cover.jpg', { type: 'image/jpeg' }),
         orientation: 'landscape',
@@ -184,9 +202,10 @@ describe('exportVideo', () => {
     const { exportVideo } = await import('../video-exporter')
 
     const progressSpy = vi.fn()
+    const inputBuffer = mockAudioBuffer(96_000, 44_100, 2)
 
     const result = await exportVideo({
-      audioBuffer: {} as AudioBuffer,
+      audioBuffer: inputBuffer,
       effects: {} as any,
       imageFile: new File(['data'], 'cover.jpg', { type: 'image/jpeg' }),
       orientation: 'portrait',
@@ -194,12 +213,44 @@ describe('exportVideo', () => {
     })
 
     expect(result.blob).toBeInstanceOf(Blob)
-  expect(result.width).toBe(180)
-  expect(result.height).toBe(320)
+    expect(result.width).toBe(180)
+    expect(result.height).toBe(320)
     expect(result.frameRate).toBeGreaterThan(0)
     const lastProgress = progressSpy.mock.calls.at(-1)?.[0]
     expect(lastProgress).toMatchObject({ percent: 1, stage: 'finalizing' })
     expect(releaseImageMock).toHaveBeenCalled()
     expect(result.mimeType).toBe('video/mp4')
+    expect(renderOfflineAudioBufferMock).toHaveBeenCalledWith(
+      inputBuffer,
+      expect.anything(),
+      expect.objectContaining({ sampleRate: 44_100 }),
+    )
+  expect(getBestSupportedAudioCodecMock).toHaveBeenCalledWith(44_100, expect.any(Number), 128_000)
+  })
+
+  it('clamps high-rate audio to 48kHz for video export', async () => {
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas as unknown as typeof OffscreenCanvas)
+    class DummyVideoEncoder {}
+    class DummyAudioEncoder {}
+    vi.stubGlobal('VideoEncoder', DummyVideoEncoder as unknown as typeof VideoEncoder)
+    vi.stubGlobal('AudioEncoder', DummyAudioEncoder as unknown as typeof AudioEncoder)
+
+    const { exportVideo } = await import('../video-exporter')
+
+    const highRateBuffer = mockAudioBuffer(192_000, 96_000, 2)
+
+    await exportVideo({
+      audioBuffer: highRateBuffer,
+      effects: {} as any,
+      imageFile: new File(['data'], 'cover.jpg', { type: 'image/jpeg' }),
+      orientation: 'landscape',
+    })
+
+    expect(renderOfflineAudioBufferMock).toHaveBeenCalledWith(
+      highRateBuffer,
+      expect.anything(),
+      expect.objectContaining({ sampleRate: 48_000 }),
+    )
+  expect(getBestSupportedAudioCodecMock).toHaveBeenCalledWith(48_000, expect.any(Number), 128_000)
   })
 })
