@@ -31,3 +31,4 @@ packages
 pids
 .file-manifest
 .devcontainer/
+dist/index.html
