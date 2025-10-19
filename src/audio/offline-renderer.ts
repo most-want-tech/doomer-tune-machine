@@ -133,6 +133,7 @@ const configureGraph = (
 
   pitchShiftOutput.connect(lowPass)
   lowPass.connect(delay)
+  lowPass.connect(gain)
   delay.connect(feedback)
   feedback.connect(delay)
 
