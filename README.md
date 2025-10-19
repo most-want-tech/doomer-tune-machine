@@ -13,6 +13,7 @@ A real-time audio processing web application that transforms uploaded songs into
 - **Audio Export**: Export processed audio as WAV files
 - **Video Export**: Generate lo-fi aesthetic videos with background images (12fps, VHS-quality)
 - **Feature-Based Architecture**: Clean, modular codebase following Bulletproof React patterns
+- **Versioned Builds**: Footer displays the current release and build hash linked to GitHub
 
 ## 🏗️ Architecture
 

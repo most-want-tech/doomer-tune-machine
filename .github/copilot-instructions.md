@@ -62,6 +62,12 @@ npm run build        # TypeScript build with audio optimizations
 npm run kill         # Kill process on port 5000 if needed
 ```
 
+### Versioning & Releases
+- The app surface displays the active version/build via `src/lib/version.ts`, which consumes the `__APP_VERSION__` and `__APP_GIT_SHA__` constants defined in `vite.config.ts`.
+- Update package version with `npm version <patch|minor|major>` so the footer and release links stay accurate.
+- Pushing an annotated tag that matches `v*` triggers `.github/workflows/release.yml`, which runs tests, builds the production bundle, and publishes a GitHub Release with the bundled artifact.
+- During local development (no Git SHA), version links fall back to the releases overview to avoid 404s.
+
 ### Audio Context Gotchas
 - Audio context requires user interaction to start - handle suspended state
 - Always check `audioContextRef.current` before Web Audio API calls
