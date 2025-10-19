@@ -13,6 +13,7 @@ A real-time audio processing web application that transforms uploaded songs into
 - **Audio Export**: Export processed audio as WAV files
 - **Video Export**: Generate lo-fi aesthetic videos with background images (12fps, VHS-quality)
 - **Feature-Based Architecture**: Clean, modular codebase following Bulletproof React patterns
+- **Versioned Builds**: Footer displays the current release and build hash linked to GitHub
 
 ## 🏗️ Architecture
 
@@ -43,6 +44,13 @@ npm run dev          # Start development server
 npm run build        # Build for production
 npm run test         # Run test suite
 ```
+
+## 📦 Versioning & Releases
+
+1. Update the version field via npm: `npm version <patch|minor|major>` (this updates `package.json`, creates a git commit, and tags it automatically).
+2. Push the branch and tag: `git push && git push --tags` to trigger the `Release` workflow.
+3. The GitHub Action builds the production bundle, attaches the artifact, and publishes release notes generated from the tag message.
+4. The application footer shows the current version and build hash so users can confirm the deployed release.
 
 ## Browser Compatibility
 

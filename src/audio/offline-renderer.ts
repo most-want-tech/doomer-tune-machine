@@ -1,13 +1,35 @@
 import * as Tone from 'tone'
-import type { AudioEffects } from './audio-effects'
+import { type AudioEffects, getCompensatedPitch } from './audio-effects'
 import { createNoiseBuffer, createReverbImpulse, createVinylNoiseBuffer, getDistortionCurve } from './audio-utils'
 import { audioBufferToWav } from './wav-encoder'
 
 const VINYL_GAIN = 0.15
+const MIN_PLAYBACK_RATE = 0.01
 
 const getPlaybackRateFactor = (effects: AudioEffects) => {
   // Playback rate now ONLY controls speed, not pitch
-  return effects.playbackRate
+  return Math.max(MIN_PLAYBACK_RATE, effects.playbackRate)
+}
+
+const fallbackContexts = new Map<string, OfflineAudioContext>()
+
+const createBufferCompatible = (numberOfChannels: number, length: number, sampleRate: number) => {
+  if (typeof AudioBuffer === 'function') {
+    try {
+      return new AudioBuffer({ numberOfChannels, length, sampleRate })
+    } catch (_error) {
+      // fall through to OfflineAudioContext-based creation
+    }
+  }
+
+  const key = `${numberOfChannels}:${sampleRate}`
+  let context = fallbackContexts.get(key)
+  if (!context) {
+    context = new OfflineAudioContext(numberOfChannels, 1, sampleRate)
+    fallbackContexts.set(key, context)
+  }
+
+  return context.createBuffer(numberOfChannels, length, sampleRate)
 }
 
 const shouldResample = (rateFactor: number) => Math.abs(rateFactor - 1) > 1e-6
@@ -19,11 +41,7 @@ const stretchAudioBuffer = (buffer: AudioBuffer, rateFactor: number): AudioBuffe
 
   const { numberOfChannels, length, sampleRate } = buffer
   const stretchedLength = Math.max(1, Math.ceil(length / rateFactor))
-  const stretched = new AudioBuffer({
-    numberOfChannels,
-    length: stretchedLength,
-    sampleRate,
-  })
+  const stretched = createBufferCompatible(numberOfChannels, stretchedLength, sampleRate)
 
   for (let channel = 0; channel < numberOfChannels; channel++) {
     const source = buffer.getChannelData(channel)
@@ -76,7 +94,8 @@ const configureGraph = (
 
   // Create Tone.js context and PitchShift for offline rendering
   Tone.setContext(offlineContext as any)
-  const pitchShift = new Tone.PitchShift(effects.pitchShift)
+  const effectivePlaybackRate = getPlaybackRateFactor(effects)
+  const pitchShift = new Tone.PitchShift()
   const pitchShiftInput = offlineContext.createGain()
   const pitchShiftOutput = offlineContext.createGain()
 
@@ -96,6 +115,7 @@ const configureGraph = (
   reverbGain.gain.value = effects.reverbMix
   dryGain.gain.value = 1 - effects.reverbMix
   distortion.curve = getDistortionCurve(offlineContext, effects.distortionAmount) as Float32Array<ArrayBuffer>
+  pitchShift.pitch = getCompensatedPitch({ ...effects, playbackRate: effectivePlaybackRate })
 
   // Connect audio chain with pitch shift
   source.connect(highPass)
@@ -113,6 +133,7 @@ const configureGraph = (
 
   pitchShiftOutput.connect(lowPass)
   lowPass.connect(delay)
+  lowPass.connect(gain)
   delay.connect(feedback)
   feedback.connect(delay)
 
@@ -122,7 +143,6 @@ const configureGraph = (
 
   dryGain.connect(gain)
   reverbGain.connect(gain)
-  lowPass.connect(gain)
   noiseGain.connect(gain)
   vinylGain.connect(gain)
   gain.connect(offlineContext.destination)

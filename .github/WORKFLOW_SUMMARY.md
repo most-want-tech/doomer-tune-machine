@@ -146,6 +146,18 @@ git pull origin dev
 git branch -d feature/my-feature
 ```
 
+### ✨ Ship a Release
+
+```bash
+npm version <patch|minor|major>
+git push origin <current-branch>
+git push origin v<new-version>
+```
+
+- The version number feeds the footer via `src/lib/version.ts`.
+- Pushing the tag triggers `.github/workflows/release.yml` to build and publish a GitHub Release.
+- The footer shows the new version (and build hash when tagging from CI).
+
 ---
 
 ## 💡 Pro Tips
