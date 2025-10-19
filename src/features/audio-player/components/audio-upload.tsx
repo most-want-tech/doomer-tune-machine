@@ -3,6 +3,11 @@ import type { ChangeEvent, DragEvent } from 'react'
 import { Card } from '@/components/ui/card'
 import { CloudArrowUp } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { 
+  validateAudioFile, 
+  getAcceptAttribute, 
+  getSupportedFormatsDescription 
+} from '../utils'
 
 interface AudioUploadProps {
   fileName: string
@@ -40,9 +45,17 @@ export function AudioUpload({ fileName, onFileSelect }: AudioUploadProps) {
   }
 
   const handleFileValidation = async (file: File) => {
-    if (!file.type.startsWith('audio/')) {
-      toast.error('Please upload an audio file (MP3, WAV, OGG)')
+    // Validate file before attempting to load
+    const validation = validateAudioFile(file)
+    
+    if (!validation.isValid) {
+      toast.error(validation.error || 'Invalid audio file')
       return
+    }
+
+    // Show warning if validation passed with caveats
+    if (validation.warning) {
+      toast.warning(validation.warning)
     }
 
     try {
@@ -50,7 +63,7 @@ export function AudioUpload({ fileName, onFileSelect }: AudioUploadProps) {
       toast.success('Audio loaded successfully')
     } catch (error) {
       console.error('Failed to load audio file:', error)
-      toast.error('Failed to load audio file')
+      toast.error('Failed to load audio file. The file may be corrupted or in an unsupported format.')
     }
   }
 
@@ -70,7 +83,7 @@ export function AudioUpload({ fileName, onFileSelect }: AudioUploadProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="audio/*"
+          accept={getAcceptAttribute()}
           onChange={handleFileInput}
           className="hidden"
         />
@@ -78,7 +91,9 @@ export function AudioUpload({ fileName, onFileSelect }: AudioUploadProps) {
         <p className="text-lg mb-2">
           {fileName || 'Drop your audio file here or click to browse'}
         </p>
-        <p className="text-sm text-muted-foreground">Supports MP3, WAV, OGG</p>
+        <p className="text-sm text-muted-foreground">
+          Supports {getSupportedFormatsDescription()}
+        </p>
       </div>
     </Card>
   )
