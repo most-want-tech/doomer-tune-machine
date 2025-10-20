@@ -193,3 +193,11 @@ export function validateAudioFile(file: File): FileValidationResult {
     error: `Please upload a valid audio file. Supported formats: ${supportedFormats}`,
   }
 }
+
+// Export YouTube utilities
+export { 
+  extractVideoId, 
+  isValidYouTubeUrl, 
+  downloadYouTubeAudio,
+  type YouTubeVideoInfo 
+} from './youtube'
