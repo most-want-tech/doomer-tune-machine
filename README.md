@@ -7,6 +7,7 @@ A real-time audio processing web application that transforms uploaded songs into
 
 ## ✨ Features
 
+- **YouTube Link Input**: Load audio directly from YouTube videos by pasting a URL
 - **Real-time Audio Processing**: Apply multiple effects (reverb, distortion, lowpass filter, noise overlays, etc.) in real-time
 - **Waveform Visualization**: Interactive canvas-based waveform display with playback progress
 - **Preset Management**: Save and load effect configurations with persistent storage
@@ -99,6 +100,7 @@ Tests are automatically run via GitHub Actions on pull requests and pushes to `d
 
 - **[PRD.md](PRD.md)** - Product Requirements Document
 - **[REFACTOR_PLAN.md](REFACTOR_PLAN.md)** - Architecture refactoring documentation (completed)
+- **[docs/YOUTUBE_FEATURE.md](docs/YOUTUBE_FEATURE.md)** - YouTube link input feature documentation
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Development guidelines and patterns
 - **[SECURITY.md](SECURITY.md)** - Security policy
 
