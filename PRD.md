@@ -13,11 +13,12 @@ A real-time audio processing application that transforms uploaded songs into "do
 ## Essential Features
 
 ### Audio File Upload
-- **Functionality**: Drag-and-drop or click to upload audio files (MP3, WAV, OGG)
+- **Functionality**: Drag-and-drop or click to upload audio files (MP3, WAV, OGG, M4A, AAC, FLAC, WebM)
 - **Purpose**: Provides the source material for doomer transformation
 - **Trigger**: User clicks upload area or drags file into designated zone
 - **Progression**: Select file → Validate format → Load into audio buffer → Display waveform visualization → Enable controls
 - **Success criteria**: Audio loads within 2 seconds, waveform displays correctly, playback works smoothly
+- **Cross-platform compatibility**: File validation uses both MIME types and extensions to handle systems with unreliable MIME type detection (common on Linux)
 
 ### Real-Time Effect Controls
 - **Functionality**: Interactive sliders/switches for: Delay (feedback/time), Noise overlay, Low-pass filter, High-pass filter, Vinyl crackle simulator, Pitch shift, Playback speed
