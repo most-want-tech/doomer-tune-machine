@@ -63,7 +63,7 @@ export function AudioUpload({ fileName, onFileSelect }: AudioUploadProps) {
       toast.success('Audio loaded successfully')
     } catch (error) {
       console.error('Failed to load audio file:', error)
-      toast.error('Failed to load audio file. The file may be corrupted or in an unsupported format.')
+      toast.error('Failed to load audio file. The file may be corrupted.')
     }
   }
 
