@@ -1,5 +1,7 @@
 # Feature: YouTube to MP3 Conversion via GitHub Actions
 
+**GitHub Issue:** [#37](https://github.com/most-want-tech/doomer-tune-machine/issues/37)
+
 ## 📋 Overview
 
 Implement a server-side YouTube to MP3 conversion system using GitHub Actions as a stateless processing backend. This feature allows users to paste YouTube URLs directly into the app, triggering an automated workflow that downloads, converts, and delivers MP3 files back to the webapp for audio processing.

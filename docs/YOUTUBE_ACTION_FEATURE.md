@@ -1,11 +1,13 @@
 # YouTube-to-MP3 via GitHub Actions
 
+**GitHub Issue:** [#37](https://github.com/most-want-tech/doomer-tune-machine/issues/37)
+
 ## Overview
 Process YouTube videos server-side using GitHub Actions as a stateless conversion API. Users paste a YouTube URL, the webapp triggers a workflow dispatch, Python downloads & converts to MP3, and the result is delivered back via GitHub Releases or artifact download.
 
 **Note:** This replaces the previous Invidious-based approach which was removed due to reliability issues with third-party API instances.
 
-**Implementation Issue:** [`.github/ISSUE_YOUTUBE_ACTIONS.md`](../.github/ISSUE_YOUTUBE_ACTIONS.md) - Professional-grade implementation plan with phases, acceptance criteria, and success metrics.
+**Implementation Plan:** [`.github/ISSUE_YOUTUBE_ACTIONS.md`](../.github/ISSUE_YOUTUBE_ACTIONS.md) - Professional-grade implementation plan with phases, acceptance criteria, and success metrics.
 
 ## Architecture: GitHub-Native Processing Pipeline
 
