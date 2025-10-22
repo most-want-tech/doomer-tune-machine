@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { useAudioProcessor, DEFAULT_EFFECTS, type AudioEffects } from '@/hooks/use-audio-processor'
 import { AppHeader, AppFooter } from '@/components/layout'
-import { AudioUpload, YouTubeInput } from '@/features/audio-player'
-import { downloadYouTubeAudio } from '@/features/audio-player/utils'
+import { AudioUpload } from '@/features/audio-player'
 import { PlaybackPanel } from '@/features/playback'
 import { EffectsPanel } from '@/features/effects'
 import { usePresets, PresetControls } from '@/features/presets'
 import { ExportPanel, useAudioExport, useVideoExport, useVideoImage } from '@/features/export'
-import { toast, Toaster } from 'sonner'
+import { Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 function App() {
@@ -15,12 +14,10 @@ function App() {
   const [fileName, setFileName] = useState<string>('')
   const [effects, setEffects] = useState<AudioEffects>(DEFAULT_EFFECTS)
   const [volume, setVolume] = useState(0.7)
-  const [isLoadingYouTube, setIsLoadingYouTube] = useState(false)
-  const [youtubeProgress, setYoutubeProgress] = useState(0)
   
   const { presets, savePreset, loadPreset, deletePreset } = usePresets()
   const {
-    loadAudioFile, loadAudioBuffer, play, pause, stop, seek, setVolume: setAudioVolume,
+    loadAudioFile, play, pause, stop, seek, setVolume: setAudioVolume,
     updateEffects, exportAudio, isPlaying, currentTime, duration,
   } = useAudioProcessor()
   const { isAudioExporting, audioExportProgress, handleAudioExport } = useAudioExport({ audioBuffer, fileName, exportAudio })
@@ -31,25 +28,6 @@ function App() {
     const buffer = await loadAudioFile(file)
     setAudioBuffer(buffer)
     setFileName(file.name)
-  }
-
-  const handleYouTubeLoad = async (url: string) => {
-    setIsLoadingYouTube(true)
-    setYoutubeProgress(0)
-
-    try {
-      const { buffer: arrayBuffer, title } = await downloadYouTubeAudio(
-        url,
-        (progress) => setYoutubeProgress(progress)
-      )
-      
-      const buffer = await loadAudioBuffer(arrayBuffer)
-      setAudioBuffer(buffer)
-      setFileName(`${title}.mp3`)
-    } finally {
-      setIsLoadingYouTube(false)
-      setYoutubeProgress(0)
-    }
   }
 
   const handleEffectChange = (key: keyof AudioEffects, value: number | boolean) => {
@@ -70,11 +48,6 @@ function App() {
         <div className="max-w-6xl mx-auto space-y-6">
           <AppHeader />
           <AudioUpload fileName={fileName} onFileSelect={handleFileSelect} />
-          <YouTubeInput 
-            isLoading={isLoadingYouTube}
-            progress={youtubeProgress}
-            onSubmit={handleYouTubeLoad}
-          />
 
           {audioBuffer && (
             <>
