@@ -1,0 +1,128 @@
+name: YouTube to MP3 Conversion
+
+on:
+  workflow_dispatch:
+    inputs:
+      youtube_url:
+        description: 'YouTube video URL'
+        required: true
+        type: string
+      request_id:
+        description: 'Unique request identifier (timestamp-hash)'
+        required: true
+        type: string
+
+# Limit to 1 concurrent conversion to avoid resource exhaustion
+concurrency:
+  group: youtube-conversion
+  cancel-in-progress: false
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install yt-dlp and ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install yt-dlp
+      
+      - name: Download and convert to MP3
+        id: convert
+        run: |
+          set -e
+          
+          # Create output directory
+          mkdir -p output
+          
+          # Download and convert to MP3
+          echo "Downloading: ${{ inputs.youtube_url }}"
+          yt-dlp \
+            --extract-audio \
+            --audio-format mp3 \
+            --audio-quality 192K \
+            --max-filesize 50M \
+            --no-playlist \
+            --output "output/%(title)s.%(ext)s" \
+            --print-to-file "%(title)s" output/title.txt \
+            "${{ inputs.youtube_url }}"
+          
+          # Get the generated filename
+          MP3_FILE=$(find output -name "*.mp3" | head -n 1)
+          
+          if [ -z "$MP3_FILE" ]; then
+            echo "Error: No MP3 file generated"
+            exit 1
+          fi
+          
+          # Check file size (50MB = 52428800 bytes)
+          FILE_SIZE=$(stat -f%z "$MP3_FILE" 2>/dev/null || stat -c%s "$MP3_FILE")
+          MAX_SIZE=52428800
+          
+          if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
+            echo "Error: File size ($FILE_SIZE bytes) exceeds 50MB limit"
+            exit 1
+          fi
+          
+          # Get video title
+          VIDEO_TITLE=$(cat output/title.txt || echo "audio")
+          
+          # Sanitize filename for release asset
+          SAFE_FILENAME=$(echo "$VIDEO_TITLE" | tr -dc '[:alnum:][:space:]-' | tr '[:space:]' '_' | cut -c1-100)
+          OUTPUT_NAME="${SAFE_FILENAME}.mp3"
+          
+          # Rename file
+          mv "$MP3_FILE" "output/$OUTPUT_NAME"
+          
+          # Export variables
+          echo "filename=$OUTPUT_NAME" >> $GITHUB_OUTPUT
+          echo "title=$VIDEO_TITLE" >> $GITHUB_OUTPUT
+          echo "size=$FILE_SIZE" >> $GITHUB_OUTPUT
+          
+          echo "Conversion complete: $OUTPUT_NAME (${FILE_SIZE} bytes)"
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: audio-${{ inputs.request_id }}
+          release_name: Audio Conversion - ${{ steps.convert.outputs.title }}
+          body: |
+            **Automated Audio Conversion**
+            
+            - Source: ${{ inputs.youtube_url }}
+            - Title: ${{ steps.convert.outputs.title }}
+            - Size: ${{ steps.convert.outputs.size }} bytes
+            - Format: MP3 (192kbps)
+            - Request ID: ${{ inputs.request_id }}
+            - Created: ${{ github.event.repository.updated_at }}
+            
+            _This release will be automatically deleted after 24 hours._
+          draft: false
+          prerelease: true
+      
+      - name: Upload MP3 Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: output/${{ steps.convert.outputs.filename }}
+          asset_name: ${{ steps.convert.outputs.filename }}
+          asset_content_type: audio/mpeg
+      
+      - name: Cleanup
+        if: always()
+        run: rm -rf output
