@@ -165,6 +165,21 @@ export function useAudioProcessor() {
     return decodedBuffer
   }
 
+  const loadAudioBuffer = async (arrayBuffer: ArrayBuffer) => {
+    const graph = ensureGraph()
+
+    stop()
+
+    const decodedBuffer = await graph.context.decodeAudioData(arrayBuffer.slice(0))
+
+    audioBufferRef.current = decodedBuffer
+    setDuration(decodedBuffer.duration)
+    pauseTimeRef.current = 0
+    setCurrentTime(0)
+
+    return decodedBuffer
+  }
+
   const getPlaybackPosition = () => {
     const graph = graphRef.current
     if (!graph || !isPlayingRef.current) {
@@ -321,6 +336,7 @@ export function useAudioProcessor() {
 
   return {
     loadAudioFile,
+    loadAudioBuffer,
     play,
     pause,
     stop,

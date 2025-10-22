@@ -6,7 +6,7 @@ import { PlaybackPanel } from '@/features/playback'
 import { EffectsPanel } from '@/features/effects'
 import { usePresets, PresetControls } from '@/features/presets'
 import { ExportPanel, useAudioExport, useVideoExport, useVideoImage } from '@/features/export'
-import { toast, Toaster } from 'sonner'
+import { Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 function App() {
