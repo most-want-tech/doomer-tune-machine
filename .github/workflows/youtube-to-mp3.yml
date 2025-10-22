@@ -66,7 +66,7 @@ jobs:
           fi
           
           # Check file size (50MB = 52428800 bytes)
-          FILE_SIZE=$(stat -f%z "$MP3_FILE" 2>/dev/null || stat -c%s "$MP3_FILE")
+          FILE_SIZE=$(stat -c%s "$MP3_FILE")
           MAX_SIZE=52428800
           
           if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then

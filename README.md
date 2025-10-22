@@ -7,6 +7,7 @@ A real-time audio processing web application that transforms uploaded songs into
 
 ## ✨ Features
 
+- **YouTube to MP3 Conversion**: Paste YouTube URLs to automatically download and convert videos to MP3 using GitHub Actions
 - **Real-time Audio Processing**: Apply multiple effects (reverb, distortion, lowpass filter, noise overlays, etc.) in real-time
 - **Waveform Visualization**: Interactive canvas-based waveform display with playback progress
 - **Preset Management**: Save and load effect configurations with persistent storage
@@ -44,6 +45,34 @@ npm run dev          # Start development server
 npm run build        # Build for production
 npm run test         # Run test suite
 ```
+
+## 🎥 YouTube to MP3 Conversion
+
+The app includes a server-side YouTube to MP3 conversion feature powered by GitHub Actions. Simply paste a YouTube URL and the app will:
+
+1. **Trigger Conversion**: Send a request to GitHub Actions to process the video
+2. **Download & Convert**: GitHub Actions uses `yt-dlp` and `ffmpeg` to extract audio at 192kbps MP3 quality
+3. **Deliver Audio**: The converted MP3 is automatically downloaded and loaded into the audio processor
+
+**Features:**
+- Supports all YouTube URL formats (watch, youtu.be, embed, shorts)
+- Real-time progress indicator (0-100%)
+- 50MB file size limit (enforced server-side)
+- Automatic cleanup: Converted files are deleted after 24 hours
+- No authentication required (uses public GitHub API)
+
+**Limitations:**
+- Conversion takes 30-90 seconds depending on video length
+- Maximum video length limited by 10-minute workflow timeout
+- Rate limited by GitHub Actions concurrent job quota
+
+**How It Works:**
+The feature uses GitHub Actions as a stateless processing backend. When you submit a YouTube URL:
+1. A workflow is triggered via GitHub's API with a unique request ID
+2. The workflow downloads the video using `yt-dlp` and converts to MP3 with `ffmpeg`
+3. The MP3 is uploaded as a release asset with tag `audio-{requestId}`
+4. The app polls for the release and downloads the MP3 when ready
+5. A scheduled workflow runs daily to clean up releases older than 24 hours
 
 ## 📦 Versioning & Releases
 
