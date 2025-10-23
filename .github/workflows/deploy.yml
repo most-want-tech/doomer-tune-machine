@@ -45,7 +45,7 @@ jobs:
         run: npm run build
         env:
           GITHUB_SHA: ${{ github.sha }}
-      
+          VITE_GITHUB_TOKEN: ${{ secrets.VITE_GITHUB_TOKEN }}
       - name: Setup Pages
         uses: actions/configure-pages@v5
       
