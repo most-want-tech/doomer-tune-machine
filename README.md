@@ -54,12 +54,24 @@ The app includes a server-side YouTube to MP3 conversion feature powered by GitH
 2. **Download & Convert**: GitHub Actions uses `yt-dlp` and `ffmpeg` to extract audio at 192kbps MP3 quality
 3. **Deliver Audio**: The converted MP3 is automatically downloaded and loaded into the audio processor
 
+### ⚙️ Setup Required
+
+**This feature requires a GitHub Personal Access Token.** See the complete setup guide: [YouTube Setup Guide](docs/YOUTUBE_SETUP_GUIDE.md)
+
+**Quick Setup:**
+1. Create token: https://github.com/settings/tokens/new?scopes=public_repo
+2. Create `.env.local` in project root:
+   ```env
+   VITE_GITHUB_TOKEN=your_github_token_here
+   ```
+3. Restart dev server: `npm run dev`
+
 **Features:**
 - Supports all YouTube URL formats (watch, youtu.be, embed, shorts)
 - Real-time progress indicator (0-100%)
 - 50MB file size limit (enforced server-side)
 - Automatic cleanup: Converted files are deleted after 24 hours
-- No authentication required (uses public GitHub API)
+- Secure: Token stored in git-ignored `.env.local` file
 
 **Limitations:**
 - Conversion takes 30-90 seconds depending on video length
@@ -73,6 +85,8 @@ The feature uses GitHub Actions as a stateless processing backend. When you subm
 3. The MP3 is uploaded as a release asset with tag `audio-{requestId}`
 4. The app polls for the release and downloads the MP3 when ready
 5. A scheduled workflow runs daily to clean up releases older than 24 hours
+
+📖 **Full Documentation**: [YOUTUBE_ACTION_FEATURE.md](docs/YOUTUBE_ACTION_FEATURE.md)
 
 ## 📦 Versioning & Releases
 

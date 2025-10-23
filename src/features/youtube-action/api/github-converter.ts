@@ -12,9 +12,9 @@ const REPO_NAME = 'doomer-tune-machine'
 const WORKFLOW_FILE = 'youtube-to-mp3.yml'
 
 // Polling configuration
-const POLL_INTERVAL_MS = 2000 // 2 seconds
-const MAX_POLL_ATTEMPTS = 30 // 60 seconds total timeout
-const MAX_RELEASE_WAIT_MS = 5000 // Wait up to 5 seconds for release to appear
+const POLL_INTERVAL_MS = 9000 // 9 seconds
+const MAX_POLL_ATTEMPTS = 2300000 // 60 seconds total timeout
+const MAX_RELEASE_WAIT_MS = 10000 // Wait up to 5 seconds for release to appear
 
 /**
  * Generate a unique request ID
@@ -40,10 +40,30 @@ export function validateYouTubeUrl(url: string): boolean {
 }
 
 /**
- * Create Octokit instance (no auth needed for public repo)
+ * Create Octokit instance with optional authentication
+ * 
+ * Note: workflow_dispatch requires authentication even for public repos.
+ * Set VITE_GITHUB_TOKEN in .env.local for development.
+ * 
+ * To create a token:
+ * 1. Go to https://github.com/settings/tokens/new
+ * 2. Select scopes: 'repo' (for private repos) or 'public_repo' (for public repos only)
+ * 3. Generate token and add to .env.local: VITE_GITHUB_TOKEN=your_token_here
  */
 function createOctokit(): Octokit {
-  return new Octokit()
+  const token = import.meta.env.VITE_GITHUB_TOKEN
+  
+  if (!token) {
+    console.warn(
+      'No GitHub token configured. The workflow_dispatch API requires authentication.\n' +
+      'Set VITE_GITHUB_TOKEN in your .env.local file.\n' +
+      'See: https://github.com/settings/tokens/new?scopes=public_repo'
+    )
+  }
+  
+  return new Octokit({
+    auth: token || undefined
+  })
 }
 
 /**
@@ -72,6 +92,16 @@ export async function triggerConversion(request: ConversionRequest): Promise<voi
     })
   } catch (error) {
     console.error('Failed to trigger workflow:', error)
+    
+    // Check if it's an authentication error
+    if ((error as any).status === 401) {
+      throw new ConversionError(
+        'GitHub authentication required. Please set up VITE_GITHUB_TOKEN in your .env.local file. See docs/YOUTUBE_SETUP_GUIDE.md for instructions.',
+        'AUTH_REQUIRED',
+        error
+      )
+    }
+    
     throw new ConversionError(
       'Failed to trigger conversion workflow',
       'TRIGGER_FAILED',
