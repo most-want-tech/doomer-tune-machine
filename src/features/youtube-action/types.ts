@@ -49,7 +49,7 @@ export interface ConversionProgress {
 export class ConversionError extends Error {
   constructor(
     message: string,
-    public readonly code: 'TRIGGER_FAILED' | 'TIMEOUT' | 'NOT_FOUND' | 'DOWNLOAD_FAILED' | 'INVALID_URL',
+    public readonly code: 'AUTH_REQUIRED' | 'TRIGGER_FAILED' | 'TIMEOUT' | 'NOT_FOUND' | 'DOWNLOAD_FAILED' | 'INVALID_URL',
     public readonly originalError?: unknown
   ) {
     super(message)

@@ -75,7 +75,7 @@ The YouTube to MP3 conversion feature allows users to paste YouTube URLs directl
 - Workflow file: `youtube-to-mp3.yml`
 - Poll interval: 2 seconds
 - Max poll attempts: 30 (60 seconds total timeout)
-- No authentication required (public repo)
+- Authentication: Requires GitHub token via `VITE_GITHUB_TOKEN` environment variable
 
 #### 3. React Hook (`src/features/youtube-action/hooks/use-youtube-action.ts`)
 
@@ -233,12 +233,32 @@ Daily cleanup workflow:
 
 ## Security Considerations
 
-### No Authentication Required
+### Authentication Required
 
-The feature uses public GitHub APIs that don't require authentication:
-- `workflow_dispatch`: Requires write access to repository (handled by GitHub Actions)
-- Release API: Public releases are readable without authentication
+**GitHub Personal Access Token Setup:**
+
+1. **Create Token**: Visit https://github.com/settings/tokens/new
+2. **Select Scopes**: 
+   - For public repos: `public_repo`
+   - For private repos: `repo` (full control)
+3. **Generate Token**: Copy the generated token
+4. **Configure Environment**:
+   ```bash
+   # Create .env.local in project root (not committed to Git)
+   echo "VITE_GITHUB_TOKEN=your_github_token_here" > .env.local
+   ```
+
+**API Authentication:**
+- `workflow_dispatch`: Requires authentication even for public repos
+- Release API: Public releases are readable without authentication (token still recommended)
 - Asset downloads: Served via GitHub's CDN, no authentication needed
+
+**Security Best Practices:**
+- Store tokens in `.env.local` (git-ignored)
+- Use minimal required scopes (`public_repo` for this app)
+- Never commit tokens to version control
+- Rotate tokens periodically
+- For production deployments, use GitHub App tokens or environment secrets
 
 ### Rate Limiting
 
