@@ -154,3 +154,193 @@ For large-scale refactors (>500 LOC changes):
 - Extracted 20+ reusable components
 - Zero breaking changes during 7-phase migration
 - See `REFACTOR_PLAN.md` for detailed documentation
+
+## Tech Stack and Versions
+
+### Core Technologies
+- **Node.js**: v18+ recommended (for optimal package compatibility)
+- **React**: 19.0.0 with TypeScript strict mode
+- **TypeScript**: ~5.7.2 (configured for strict type checking)
+- **Vite**: ^6.3.5 (build tool and dev server)
+- **Vitest**: ^3.2.4 (testing framework)
+
+### Key Dependencies
+- **UI Framework**: Shadcn/ui components with Radix UI primitives
+- **Styling**: Tailwind CSS 4.1.11 with custom theme configuration
+- **Audio Processing**: 
+  - Native Web Audio API (primary)
+  - Tone.js 15.1.22 (for advanced pitch shifting)
+- **Video Export**: WebCodecs API (browser-native)
+- **State Management**: React hooks + localStorage-backed presets
+- **Icons**: Phosphor Icons 2.1.7
+- **Notifications**: Sonner 2.0.1 for toast messages
+
+### Browser Requirements
+- Modern browsers with Web Audio API support
+- WebCodecs API support for video export (Chrome 94+, Edge 94+)
+- Canvas API for waveform visualization
+
+## Build, Run, and Test Commands
+
+### Installation
+```bash
+npm install          # Install all dependencies
+```
+
+### Development
+```bash
+npm run dev          # Start development server (default: http://localhost:5173)
+npm run kill         # Kill process on port 5000 (if needed for cleanup)
+```
+
+### Building
+```bash
+npm run build        # Production build (outputs to dist/)
+npm run preview      # Preview production build locally
+npm run optimize     # Run Vite dependency pre-bundling optimization
+```
+
+### Testing
+```bash
+npm test             # Run all tests once
+npm run test:watch   # Run tests in watch mode (for development)
+npm run test:coverage # Generate coverage report
+```
+
+**Test Coverage**: Currently 79 tests across 10 test files covering:
+- Audio processing utilities
+- Video export and codec detection
+- Feature-specific logic (audio-player, effects)
+- Custom hooks (use-audio-processor)
+
+### Linting and Formatting
+```bash
+npm run lint         # Run ESLint (Note: eslint.config.js needs to be created)
+```
+
+**Current Status**: ESLint is configured in package.json but `eslint.config.js` file is missing. The project uses:
+- ESLint 9.28.0 with TypeScript support
+- eslint-plugin-react-hooks 5.2.0
+- eslint-plugin-react-refresh 0.4.19
+
+**Code Style Conventions**:
+- TypeScript strict mode enabled
+- Prefer functional components with hooks
+- Use `@/` path alias for src imports
+- Import order: React → External libs → Internal components → Types → Styles
+- No unnecessary comments (code should be self-documenting)
+- Match existing patterns in the codebase
+
+## Testing Guidelines
+
+### Test Organization
+- Test files located alongside source files in `__tests__/` directories
+- Test file naming: `<component-name>.test.ts(x)`
+- Use Vitest with happy-dom environment for DOM testing
+- Mock Web Audio API using `web-audio-test-api` package
+
+### Writing Tests
+- Focus on behavior, not implementation details
+- Test user interactions and state changes
+- Mock external dependencies (audio context, file system)
+- Keep tests isolated and independent
+- Use descriptive test names that explain expected behavior
+
+### Running Tests
+- Tests run automatically on GitHub Actions for PRs and pushes
+- All tests must pass before merging
+- Aim to maintain or improve test coverage with new features
+
+## Security Practices
+
+### General Guidelines
+- Never commit secrets or API keys to source code
+- Validate user inputs, especially file uploads
+- Handle audio context suspend/resume securely
+- Follow responsible disclosure for security issues (see `SECURITY.md`)
+
+### Audio/Video Processing
+- Validate file types before processing (audio-player feature handles this)
+- Limit file sizes to prevent memory issues
+- Use OfflineAudioContext for exports to prevent blocking UI
+- Handle codec errors gracefully with fallback options
+
+### Third-Party Dependencies
+- Dependabot configured for automatic security updates
+- Review dependency updates before merging
+- Prefer well-maintained packages with active communities
+
+## Common Pitfalls and Solutions
+
+### Audio Context Issues
+**Problem**: Audio doesn't play after loading a file  
+**Solution**: Audio context starts in "suspended" state and requires user interaction. Always check `audioContext.state` and call `audioContext.resume()` after user gesture.
+
+**Problem**: "The AudioContext was not allowed to start"  
+**Solution**: Browser autoplay policies require user interaction. Ensure audio playback is triggered by a user action (click, tap).
+
+### Buffer Management
+**Problem**: "Cannot reuse AudioBufferSourceNode"  
+**Solution**: Buffer source nodes are one-time-use. Create a new source node for each playback in the audio graph.
+
+### State Synchronization
+**Problem**: Audio playing but UI not updating  
+**Solution**: Ensure state updates are connected to audio events. Use refs for audio nodes, state for UI-relevant values.
+
+### Build Issues
+**Problem**: Large chunk size warning during build  
+**Solution**: Expected behavior due to Tone.js and Web Audio API polyfills. Consider dynamic imports for features used less frequently if bundle size becomes critical.
+
+### Video Export
+**Problem**: "Codec not supported" error  
+**Solution**: Platform-dependent codec availability (e.g., AAC not available on Linux). The app automatically detects and falls back to Opus or Vorbis. Inform users about codec limitations.
+
+## Contributing Guidelines
+
+### Before Starting Work
+1. Check existing issues and PRs to avoid duplicates
+2. For large changes, create a refactoring plan (see `REFACTORING_WORKFLOW.md`)
+3. Discuss major architectural changes in issues first
+
+### Development Workflow
+1. Create a feature branch from `dev` (use format: `feature/<name>` or `fix/<name>`)
+2. Make small, focused commits with clear messages
+3. Run tests frequently: `npm run test:watch`
+4. Ensure build succeeds: `npm run build`
+5. Update documentation if adding features or changing APIs
+
+### Pull Request Process
+1. Open PR against `dev` branch (not `main`)
+2. Include clear description of changes and motivation
+3. Reference related issues with `Fixes #<issue-number>`
+4. Ensure CI passes (tests, build)
+5. Address review feedback promptly
+6. Squash commits if requested before merge
+
+### Code Review Guidelines
+- Check that changes follow feature-based architecture
+- Verify no cross-feature imports (features should be isolated)
+- Look for potential audio context lifecycle issues
+- Ensure proper error handling and user feedback
+- Confirm tests cover new behavior
+
+## Release Process
+
+### Versioning
+1. Update version: `npm version <patch|minor|major>`
+2. Push branch and tags: `git push && git push --tags`
+3. GitHub Action automatically builds and publishes release
+4. Release notes generated from git tag annotation
+
+### Version Display
+- Version shown in app footer via `src/lib/version.ts`
+- Links to specific GitHub release (or releases page for dev builds)
+- Build hash (Git SHA) displayed for traceability
+
+## Additional Resources
+
+- **PRD**: See `PRD.md` for product requirements and feature specifications
+- **Architecture**: See `REFACTOR_PLAN.md` for completed refactoring documentation
+- **Workflows**: See `.github/REFACTORING_WORKFLOW.md` for large-scale refactoring process
+- **Security**: See `SECURITY.md` for security policies and reporting
+- **Issues**: Check existing issues before creating new ones
